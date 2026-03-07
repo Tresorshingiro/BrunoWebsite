@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { AdminProvider } from './context/AdminContext'
 import { CartProvider } from './context/CartContext'
@@ -73,6 +73,7 @@ export default function App() {
 
             {/* Admin routes — AdminLayout uses <Outlet /> and handles auth */}
             <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="/admin/login" replace />} />
               <Route path="login" element={<AdminLogin />} />
               <Route path="dashboard" element={<AdminDashboard />} />
               <Route path="books" element={<AdminBooks />} />

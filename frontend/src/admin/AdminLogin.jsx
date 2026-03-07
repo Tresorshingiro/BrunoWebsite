@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAdmin } from '../context/AdminContext'
 import toast from 'react-hot-toast'
@@ -7,8 +7,15 @@ export default function AdminLogin() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
-  const { login } = useAdmin()
+  const { admin, login } = useAdmin()
   const navigate = useNavigate()
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (admin) {
+      navigate('/admin/dashboard')
+    }
+  }, [admin, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
