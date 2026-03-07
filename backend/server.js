@@ -16,8 +16,11 @@ const app = express()
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
+// Remove trailing slash from CLIENT_ORIGIN if present
+const clientOrigin = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').replace(/\/$/, '')
+
 app.use(cors({
-    origin: process.env.CLIENT_ORIGIN || 'http://localhost:5173',
+    origin: clientOrigin,
     credentials: true,
 }))
 
