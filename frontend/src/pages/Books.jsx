@@ -26,9 +26,9 @@ export default function Books() {
         </header>
 
         {loading ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="rounded-xl bg-ink-100 h-80 w-full animate-pulse" />
+              <div key={i} className="rounded-xl bg-ink-100 aspect-[2/3] w-full animate-pulse" />
             ))}
           </div>
         ) : books.length === 0 ? (
@@ -39,7 +39,7 @@ export default function Books() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {books.map((book) => (
               <BookCard key={book._id} book={book} />
             ))}

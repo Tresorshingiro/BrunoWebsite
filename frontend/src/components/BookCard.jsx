@@ -23,11 +23,11 @@ export default function BookCard({ book, showAddToCart = true }) {
   return (
     <article className="group flex flex-col bg-white rounded-xl border border-ink-200 overflow-hidden hover:shadow-lg hover:border-brand-300 transition-all duration-300 w-full">
       <Link to={`/books/${book._id}`} className="block">
-        <div className="aspect-[3/4] bg-ink-100 overflow-hidden">
+        <div className="w-full aspect-[2/3] bg-ink-100 overflow-hidden flex items-center justify-center">
           <img
             src={book.coverImage}
             alt={book.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
           />
         </div>
         <div className="p-4">

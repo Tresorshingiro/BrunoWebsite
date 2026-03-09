@@ -7,10 +7,12 @@ import { UserProvider } from './context/UserContext'
 // Layout
 import Layout from './components/Layout'
 import ProtectedRoute from './components/ProtectedRoute'
+import ScrollToTop from './components/ScrollToTop'
 
 // Public pages
 import Home from './pages/Home'
 import About from './pages/About'
+import Mission from './pages/Mission'
 import Books from './pages/Books'
 import BookDetail from './pages/BookDetail'
 import Blog from './pages/Blog'
@@ -51,6 +53,7 @@ export default function App() {
               error: { iconTheme: { primary: '#ef4444', secondary: '#080808' } },
             }}
           />
+          <ScrollToTop />
           <Routes>
             {/* Auth route (standalone) */}
             <Route path="/login" element={<Login />} />
@@ -59,6 +62,7 @@ export default function App() {
             <Route element={<Layout />}>
               <Route path="/" element={<Home />} />
               <Route path="/about" element={<About />} />
+              <Route path="/mission" element={<Mission />} />
               <Route path="/books" element={<Books />} />
               <Route path="/books/:id" element={<BookDetail />} />
               <Route path="/blog" element={<Blog />} />
