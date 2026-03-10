@@ -68,6 +68,57 @@ const getMe = async (req, res) => {
     }
 }
 
+// PUT update admin profile (protected)
+const updateProfile = async (req, res) => {
+    try {
+        const { username, email, currentPassword, newPassword } = req.body
+        const admin = await Admin.findById(req.admin.id)
+        
+        if (!admin) {
+            return res.status(404).json({ message: 'Admin not found' })
+        }
+
+        // If updating email or username, check for duplicates
+        if (email && email !== admin.email) {
+            const emailExists = await Admin.findOne({ email, _id: { $ne: admin._id } })
+            if (emailExists) {
+                return res.status(400).json({ message: 'Email already in use' })
+            }
+            admin.email = email
+        }
+
+        if (username && username !== admin.username) {
+            const usernameExists = await Admin.findOne({ username, _id: { $ne: admin._id } })
+            if (usernameExists) {
+                return res.status(400).json({ message: 'Username already in use' })
+            }
+            admin.username = username
+        }
+
+        // If changing password, verify current password first
+        if (newPassword) {
+            if (!currentPassword) {
+                return res.status(400).json({ message: 'Current password is required to set new password' })
+            }
+            const isMatch = await admin.comparePassword(currentPassword)
+            if (!isMatch) {
+                return res.status(401).json({ message: 'Current password is incorrect' })
+            }
+            admin.passwordHash = await Admin.hashPassword(newPassword)
+        }
+
+        await admin.save()
+
+        res.json({
+            id: admin._id,
+            username: admin.username,
+            email: admin.email,
+        })
+    } catch (err) {
+        res.status(500).json({ message: err.message })
+    }
+}
+
 // GET dashboard stats (admin)
 const getDashboardStats = async (req, res) => {
     try {
@@ -104,4 +155,4 @@ const getDashboardStats = async (req, res) => {
     }
 }
 
-module.exports = { register, login, getMe, getDashboardStats }
+module.exports = { register, login, getMe, updateProfile, getDashboardStats }

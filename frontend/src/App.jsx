@@ -34,6 +34,7 @@ import AdminBlog from './admin/AdminBlog'
 import AdminEvents from './admin/AdminEvents'
 import AdminContact from './admin/AdminContact'
 import AdminOrders from './admin/AdminOrders'
+import AdminProfile from './admin/AdminProfile'
 
 export default function App() {
   return (
@@ -85,6 +86,7 @@ export default function App() {
               <Route path="events" element={<AdminEvents />} />
               <Route path="messages" element={<AdminContact />} />
               <Route path="orders" element={<AdminOrders />} />
+              <Route path="profile" element={<AdminProfile />} />
             </Route>
           </Routes>
         </CartProvider>

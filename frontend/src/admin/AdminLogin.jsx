@@ -36,13 +36,13 @@ export default function AdminLogin() {
   }
 
   return (
-    <div className="w-full max-w-md">
-      <div className="bg-white rounded-2xl shadow-lg border border-ink-100 p-8">
-        <h1 className="font-serif text-2xl text-ink-900 mb-2">Admin sign in</h1>
-        <p className="text-ink-500 text-sm mb-6">Sign in to manage books, blog, events, and orders.</p>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="w-full max-w-md px-4">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg border border-ink-100 p-4 sm:p-6 md:p-8">
+        <h1 className="font-serif text-xl sm:text-2xl text-ink-900 mb-1.5 sm:mb-2">Admin sign in</h1>
+        <p className="text-ink-500 text-xs sm:text-sm mb-4 sm:mb-6">Sign in to manage books, blog, events, and orders.</p>
+        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-ink-700 mb-1">
+            <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-ink-700 mb-1">
               Email
             </label>
             <input
@@ -50,13 +50,13 @@ export default function AdminLogin() {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-ink-200 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg border border-ink-200 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 min-w-0"
               placeholder="admin@example.com"
               required
             />
           </div>
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-ink-700 mb-1">
+            <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-ink-700 mb-1">
               Password
             </label>
             <input
@@ -64,16 +64,16 @@ export default function AdminLogin() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-ink-200 focus:ring-2 focus:ring-brand-500 focus:border-brand-500"
+              className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base rounded-lg border border-ink-200 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 min-w-0"
               required
             />
           </div>
-          <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-50">
+          <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-50 text-sm sm:text-base py-2.5 sm:py-3">
             {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
       </div>
-      <p className="text-center text-ink-500 text-sm mt-4">
+      <p className="text-center text-ink-500 text-xs sm:text-sm mt-3 sm:mt-4">
         <a href="/" className="text-brand-600 hover:underline">Back to site</a>
       </p>
     </div>

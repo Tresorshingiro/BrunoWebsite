@@ -101,6 +101,7 @@ export const authApi = {
   register: (username, email, password) =>
     api.post('/api/auth/register', { username, email, password }),
   me: () => api.get('/api/auth/me'),
+  updateProfile: (data) => api.put('/api/auth/profile', data),
   stats: () => api.get('/api/auth/stats'),
 }
 

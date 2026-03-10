@@ -34,8 +34,14 @@ export function AdminProvider({ children }) {
     setAdmin(null)
   }
 
+  const updateProfile = async (data) => {
+    const updatedAdmin = await authApi.updateProfile(data)
+    setAdmin(updatedAdmin)
+    return updatedAdmin
+  }
+
   return (
-    <AdminContext.Provider value={{ admin, loading, login, logout }}>
+    <AdminContext.Provider value={{ admin, loading, login, logout, updateProfile }}>
       {children}
     </AdminContext.Provider>
   )
