@@ -72,7 +72,7 @@ export default function App() {
               <Route path="/contact" element={<Contact />} />
               <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
               <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
-              <Route path="/checkout/success" element={<ProtectedRoute><OrderSuccess /></ProtectedRoute>} />
+              <Route path="/order-success" element={<ProtectedRoute><OrderSuccess /></ProtectedRoute>} />
               <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
             </Route>
 

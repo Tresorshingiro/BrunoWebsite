@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { paymentApi } from '../lib/api'
+import { useCart } from '../context/CartContext'
 
 export default function OrderSuccess() {
   const [searchParams] = useSearchParams()
   const paymentIntentId = searchParams.get('payment_intent')
   const [confirmed, setConfirmed] = useState(false)
   const [loading, setLoading] = useState(!!paymentIntentId)
+  const { clearCart } = useCart()
 
   useEffect(() => {
     if (!paymentIntentId) {
@@ -51,8 +53,10 @@ export default function OrderSuccess() {
         shippingAddress: data.shippingAddress,
         total: data.total,
       })
+      clearCart()
       setConfirmed(true)
     } catch (_) {
+      clearCart()
       setConfirmed(true)
     } finally {
       setLoading(false)

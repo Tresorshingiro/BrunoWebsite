@@ -171,11 +171,11 @@ export default function AdminLayout() {
                     {/* Dropdown Menu */}
                     {profileMenuOpen && (
                       <>
-                        <div 
-                          className="fixed inset-0 z-10" 
+                        <div
+                          className="fixed inset-0 z-40"
                           onClick={() => setProfileMenuOpen(false)}
                         />
-                        <div className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border border-ink-200 py-2 z-20">
+                        <div className="absolute right-0 mt-2 w-56 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border border-ink-200 py-2 z-50">
                           <div className="px-4 py-3 border-b border-ink-100">
                             <p className="text-sm font-semibold text-ink-900">{admin?.username}</p>
                             <p className="text-xs text-ink-500 mt-0.5">{admin?.email}</p>

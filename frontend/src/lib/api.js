@@ -1,10 +1,13 @@
 const API_BASE = import.meta.env.VITE_API_URL || ''
 
 function getAuthHeaders() {
-  // Check for user token first, then admin token
   const userToken = localStorage.getItem('userToken')
-  const adminToken = localStorage.getItem('adminToken')
-  const token = userToken || adminToken
+  const token = userToken
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
+function getAdminHeaders() {
+  const token = localStorage.getItem('adminToken')
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
 
@@ -40,6 +43,20 @@ export const api = {
   },
   delete(path) {
     return this.request('DELETE', path)
+  },
+
+  // Admin-specific helpers — always send adminToken regardless of userToken
+  adminGet(path) {
+    return this.request('GET', path, null, { headers: getAdminHeaders() })
+  },
+  adminPut(path, data) {
+    return this.request('PUT', path, data, { headers: getAdminHeaders() })
+  },
+  adminPatch(path, data) {
+    return this.request('PATCH', path, data, { headers: getAdminHeaders() })
+  },
+  adminDelete(path) {
+    return this.request('DELETE', path, null, { headers: getAdminHeaders() })
   },
 
   // FormData for file uploads (no JSON Content-Type)
@@ -94,46 +111,59 @@ export const paymentApi = {
   createIntent: (data) => api.post('/api/payment/create-intent', data),
   confirmOrder: (data) => api.post('/api/payment/confirm-order', data),
 }
+export const blogInteractionApi = {
+  toggleLike: (id) => api.post(`/api/blog/${id}/like`),
+  addComment: (id, content) => api.post(`/api/blog/${id}/comment`, { content }),
+  deleteComment: (id, commentId) => api.delete(`/api/blog/${id}/comment/${commentId}`),
+  addReply: (id, commentId, content) => api.post(`/api/blog/${id}/comment/${commentId}/reply`, { content }),
+  deleteReply: (id, commentId, replyId) => api.delete(`/api/blog/${id}/comment/${commentId}/reply/${replyId}`),
+  uploadImage: (formData) => {
+    const token = localStorage.getItem('adminToken')
+    const headers = token ? { Authorization: `Bearer ${token}` } : {}
+    return fetch(`${API_BASE}/api/blog/upload-image`, { method: 'POST', headers, body: formData })
+      .then((r) => r.json())
+  },
+}
 
 // Auth (admin)
 export const authApi = {
   login: (email, password) => api.post('/api/auth/login', { email, password }),
   register: (username, email, password) =>
     api.post('/api/auth/register', { username, email, password }),
-  me: () => api.get('/api/auth/me'),
-  updateProfile: (data) => api.put('/api/auth/profile', data),
-  stats: () => api.get('/api/auth/stats'),
+  me: () => api.adminGet('/api/auth/me'),
+  updateProfile: (data) => api.adminPut('/api/auth/profile', data),
+  stats: () => api.adminGet('/api/auth/stats'),
 }
 
-// Admin API (require token)
+// Admin API (require adminToken)
 export const adminApi = {
   books: {
     create: (formData) => api.postForm('/api/books', formData),
     update: (id, formData) => api.putForm(`/api/books/${id}`, formData),
-    delete: (id) => api.delete(`/api/books/${id}`),
+    delete: (id) => api.adminDelete(`/api/books/${id}`),
   },
   blog: {
-    getAll: () => api.get('/api/blog/admin/all'),
-    getById: (id) => api.get(`/api/blog/id/${id}`),
+    getAll: () => api.adminGet('/api/blog/admin/all'),
+    getById: (id) => api.adminGet(`/api/blog/id/${id}`),
     create: (formData) => api.postForm('/api/blog', formData),
     update: (id, formData) => api.putForm(`/api/blog/${id}`, formData),
-    delete: (id) => api.delete(`/api/blog/${id}`),
+    delete: (id) => api.adminDelete(`/api/blog/${id}`),
   },
   events: {
-    getAll: () => api.get('/api/events/admin/all'),
+    getAll: () => api.adminGet('/api/events/admin/all'),
     create: (formData) => api.postForm('/api/events', formData),
     update: (id, formData) => api.putForm(`/api/events/${id}`, formData),
-    delete: (id) => api.delete(`/api/events/${id}`),
+    delete: (id) => api.adminDelete(`/api/events/${id}`),
   },
   contact: {
-    getAll: () => api.get('/api/contact'),
-    toggleRead: (id) => api.patch(`/api/contact/${id}/toggle-read`),
-    delete: (id) => api.delete(`/api/contact/${id}`),
+    getAll: () => api.adminGet('/api/contact'),
+    toggleRead: (id) => api.adminPatch(`/api/contact/${id}/toggle-read`),
+    delete: (id) => api.adminDelete(`/api/contact/${id}`),
   },
   orders: {
-    getAll: () => api.get('/api/payment/orders'),
-    getById: (id) => api.get(`/api/payment/orders/${id}`),
-    updateStatus: (id, status) => api.patch(`/api/payment/orders/${id}/status`, { status }),
-    delete: (id) => api.delete(`/api/payment/orders/${id}`),
+    getAll: () => api.adminGet('/api/payment/orders'),
+    getById: (id) => api.adminGet(`/api/payment/orders/${id}`),
+    updateStatus: (id, status) => api.adminPatch(`/api/payment/orders/${id}/status`, { status }),
+    delete: (id) => api.adminDelete(`/api/payment/orders/${id}`),
   },
 }

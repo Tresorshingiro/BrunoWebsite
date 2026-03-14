@@ -134,7 +134,7 @@ const getDashboardStats = async (req, res) => {
             Event.countDocuments({ isPast: false }),
             Contact.countDocuments(),
             Contact.countDocuments({ read: false }),
-            Order.countDocuments({ status: 'paid' }),
+            Order.countDocuments(),
             Order.aggregate([
                 { $match: { status: { $in: ['paid', 'processing', 'shipped', 'delivered'] } } },
                 { $group: { _id: null, total: { $sum: '$totalAmount' } } },
