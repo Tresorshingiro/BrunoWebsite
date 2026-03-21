@@ -6,6 +6,7 @@ import AnimateOnScroll from '../components/AnimateOnScroll'
 export default function Home() {
   const [latestPosts, setLatestPosts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [expanded, setExpanded] = useState(false)
 
   useEffect(() => {
     blogApi.getLatest().then((posts) => setLatestPosts(Array.isArray(posts) ? posts : [])).catch(() => setLatestPosts([])).finally(() => setLoading(false))
@@ -19,34 +20,53 @@ export default function Home() {
           <img
             src="/images/bruno-portrait.png"
             alt="Bruno Iradukunda"
-            className="w-full h-full object-cover opacity-30 object-[center_30%] animate-fade-in"
+            className="w-full h-full object-cover opacity-45 object-[60%_20%] md:object-[center_30%] md:opacity-30 animate-fade-in"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-ink-900/95 via-ink-900/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-ink-900/95 via-ink-900/70 to-transparent" />
         </div>
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-20 z-10">
+        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-24 md:py-20 z-10">
           <div className="max-w-2xl">
-            <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-semibold leading-tight mb-6 text-white">
+            <h1 className="font-serif text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-semibold leading-tight mb-4 md:mb-6 text-white">
               Bruno Iradukunda
             </h1>
-            <div className="space-y-4 text-lg md:text-xl text-ink-100 leading-relaxed mb-8">
-              <p>
+
+            {/* Bio paragraphs: show 2 on mobile, all 3 on md+ */}
+            <div className="mb-6 md:mb-8">
+              <p className="text-base sm:text-lg md:text-xl text-ink-100 leading-relaxed">
                 A son of God called to share a message of forgiveness, healing, and hope.
               </p>
-              <p>
+              <p className="text-base sm:text-lg md:text-xl text-ink-100 leading-relaxed mt-4">
                 A Rwandan author and speaker whose journey was shaped by the wounds and lessons following the 1994 Genocide Against the Tutsi.
               </p>
-              <p>
+              {/* 3rd paragraph: always visible on md+, toggle on mobile */}
+              <p className={`text-base sm:text-lg md:text-xl text-ink-100 leading-relaxed mt-4 md:block ${expanded ? 'block' : 'hidden'}`}>
                 Helping people rise beyond hatred and pain and become a better version of themselves through forgiveness.
               </p>
+              {/* Read more / less toggle — only on mobile */}
+              <button
+                type="button"
+                onClick={() => setExpanded((v) => !v)}
+                className="md:hidden mt-3 flex items-center gap-1 text-sm text-brand-300 hover:text-brand-200 transition-colors"
+              >
+                {expanded ? 'Read less' : 'Read more'}
+                <svg
+                  className={`w-4 h-4 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
             </div>
-            <div className="flex flex-wrap gap-4">
-              <Link to="/about" className="btn-primary">
+
+            {/* Buttons: 2-col grid on mobile, flex wrap on md+ */}
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-4">
+              <Link to="/about" className="btn-primary text-center text-sm sm:text-base">
                 Read My Story
               </Link>
-              <Link to="/books" className="btn-secondary border-white text-white hover:bg-white hover:text-ink-900">
+              <Link to="/books" className="btn-secondary border-white text-white hover:bg-white hover:text-ink-900 text-center text-sm sm:text-base">
                 Discover the Book
               </Link>
-              <Link to="/contact" className="btn-secondary border-white text-white hover:bg-white hover:text-ink-900">
+              <Link to="/contact" className="col-span-2 sm:col-span-1 btn-secondary border-white text-white hover:bg-white hover:text-ink-900 text-center text-sm sm:text-base">
                 Invite Me to Speak
               </Link>
             </div>

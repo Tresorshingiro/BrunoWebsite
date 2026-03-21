@@ -107,6 +107,10 @@ export const eventsApi = {
 export const contactApi = {
   submit: (data) => api.post('/api/contact', data),
 }
+export const subscribeApi = {
+  subscribe: (email) => api.post('/api/subscriptions', { email }),
+  unsubscribe: (token) => api.get(`/api/subscriptions/unsubscribe?token=${token}`),
+}
 export const paymentApi = {
   createIntent: (data) => api.post('/api/payment/create-intent', data),
   confirmOrder: (data) => api.post('/api/payment/confirm-order', data),

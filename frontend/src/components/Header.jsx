@@ -6,9 +6,9 @@ import { useUser } from '../context/UserContext'
 const navItems = [
   { to: '/', label: 'Home' },
   { to: '/about', label: 'About' },
-  { to: '/mission', label: 'Mission' },
+  { to: '/my-work', label: 'My Work' },
   { to: '/books', label: 'Books' },
-  { to: '/blog', label: 'Blog' },
+  { to: '/blog', label: 'Blogs' },
   { to: '/events', label: 'Events' },
   { to: '/contact', label: 'Contact' },
 ]

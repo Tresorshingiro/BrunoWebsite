@@ -12,7 +12,7 @@ import ScrollToTop from './components/ScrollToTop'
 // Public pages
 import Home from './pages/Home'
 import About from './pages/About'
-import Mission from './pages/Mission'
+import MyWork from './pages/MyWork'
 import Books from './pages/Books'
 import BookDetail from './pages/BookDetail'
 import Blog from './pages/Blog'
@@ -24,6 +24,7 @@ import Checkout from './pages/Checkout'
 import OrderSuccess from './pages/OrderSuccess'
 import Orders from './pages/Orders'
 import Login from './pages/Login'
+import Unsubscribe from './pages/Unsubscribe'
 
 // Admin pages
 import AdminLayout from './admin/AdminLayout'
@@ -63,7 +64,7 @@ export default function App() {
             <Route element={<Layout />}>
               <Route path="/" element={<Home />} />
               <Route path="/about" element={<About />} />
-              <Route path="/mission" element={<Mission />} />
+              <Route path="/my-work" element={<MyWork />} />
               <Route path="/books" element={<Books />} />
               <Route path="/books/:id" element={<BookDetail />} />
               <Route path="/blog" element={<Blog />} />
@@ -74,6 +75,7 @@ export default function App() {
               <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
               <Route path="/order-success" element={<ProtectedRoute><OrderSuccess /></ProtectedRoute>} />
               <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
             </Route>
 
             {/* Admin routes — AdminLayout uses <Outlet /> and handles auth */}

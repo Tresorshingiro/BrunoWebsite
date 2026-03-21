@@ -10,6 +10,7 @@ const contactRoutes = require('./routes/contact')
 const authRoutes = require('./routes/auth')
 const paymentRoutes = require('./routes/payment')
 const userRoutes = require('./routes/users')
+const subscriptionRoutes = require('./routes/subscriptions')
 
 const app = express()
 
@@ -32,6 +33,7 @@ app.use('/api/contact', contactRoutes)
 app.use('/api/auth', authRoutes)
 app.use('/api/payment', paymentRoutes)
 app.use('/api/users', userRoutes)
+app.use('/api/subscriptions', subscriptionRoutes)
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }))

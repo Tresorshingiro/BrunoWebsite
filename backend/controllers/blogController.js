@@ -1,5 +1,6 @@
 const BlogPost = require('../models/BlogPost')
 const { uploadToCloudinary, deleteFromCloudinary } = require('../middleware/upload')
+const { notifySubscribers } = require('./subscriberController')
 
 // Strip HTML tags and return plain-text excerpt
 function extractExcerpt(html, maxLength = 200) {
@@ -110,6 +111,12 @@ const createPost = async (req, res) => {
             tags: req.body.tags ? JSON.parse(req.body.tags) : [],
         })
         await post.save()
+
+        // Notify subscribers when published
+        if (post.status === 'published') {
+            notifySubscribers(post).catch(() => {})
+        }
+
         res.status(201).json(post)
     } catch (err) {
         res.status(400).json({ message: err.message })
@@ -142,7 +149,14 @@ const updatePost = async (req, res) => {
             tags: req.body.tags ? JSON.parse(req.body.tags) : post.tags,
         }
 
+        const wasPublished = post.status !== 'published'
         const updatedPost = await BlogPost.findByIdAndUpdate(req.params.id, updates, { new: true })
+
+        // Notify subscribers only when transitioning from draft → published
+        if (wasPublished && updatedPost.status === 'published') {
+            notifySubscribers(updatedPost).catch(() => {})
+        }
+
         res.json(updatedPost)
     } catch (err) {
         res.status(400).json({ message: err.message })
