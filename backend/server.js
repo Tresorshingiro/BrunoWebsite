@@ -1,4 +1,6 @@
 require('dotenv').config()
+const dns = require('dns')
+dns.setDefaultResultOrder('ipv4first') // force IPv4 — Render blocks Gmail SMTP over IPv6
 const express = require('express')
 const mongoose = require('mongoose')
 const cors = require('cors')

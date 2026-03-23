@@ -1,7 +1,16 @@
 const Contact = require('../models/Contact')
-const { Resend } = require('resend')
+const nodemailer = require('nodemailer')
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+const createTransporter = () =>
+    nodemailer.createTransport({
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS.replace(/\s/g, ''),
+        },
+    })
 
 // POST submit contact form
 const submitContact = async (req, res) => {
@@ -17,11 +26,12 @@ const submitContact = async (req, res) => {
 
         // Send email notification to Bruno's personal inbox
         try {
-            const recipientEmail = process.env.NOTIFY_EMAIL
-            await resend.emails.send({
-                from: `Bruno's Website <onboarding@resend.dev>`,
+            const transporter = createTransporter()
+            const recipientEmail = process.env.NOTIFY_EMAIL || process.env.EMAIL_USER
+            await transporter.sendMail({
+                from: `"Bruno's Website" <${process.env.EMAIL_USER}>`,
                 to: recipientEmail,
-                replyTo: email,
+                replyTo: `"${name}" <${email}>`,
                 subject: `📩 New Message: ${subject}`,
                 html: `
 <!DOCTYPE html>
@@ -106,7 +116,7 @@ ${message}
                 `,
             })
         } catch (emailErr) {
-            console.error('Email notification failed:', emailErr.message)
+            console.error('Email notification failed:', emailErr.message, emailErr.code, emailErr.response)
         }
 
         res.status(201).json({ message: 'Message sent successfully' })
