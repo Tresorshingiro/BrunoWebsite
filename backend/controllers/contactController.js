@@ -3,10 +3,12 @@ const nodemailer = require('nodemailer')
 
 const createTransporter = () =>
     nodemailer.createTransport({
-        service: 'gmail',
+        host: 'smtp.gmail.com',
+        port: 465,
+        secure: true,
         auth: {
             user: process.env.EMAIL_USER,
-            pass: process.env.EMAIL_PASS,
+            pass: process.env.EMAIL_PASS.replace(/\s/g, ''), // strip spaces from app password
         },
     })
 
@@ -114,7 +116,7 @@ ${message}
                 `,
             })
         } catch (emailErr) {
-            console.error('Email notification failed:', emailErr.message)
+            console.error('Email notification failed:', emailErr.message, emailErr.code, emailErr.response)
         }
 
         res.status(201).json({ message: 'Message sent successfully' })
