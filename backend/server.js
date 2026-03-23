@@ -17,11 +17,17 @@ const app = express()
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
-// Remove trailing slash from CLIENT_ORIGIN if present
-const clientOrigin = (process.env.CLIENT_ORIGIN || 'http://localhost:5173').replace(/\/$/, '')
+// Support multiple allowed origins (comma-separated in CLIENT_ORIGIN env var)
+const rawOrigins = process.env.CLIENT_ORIGIN || 'http://localhost:5173'
+const allowedOrigins = rawOrigins.split(',').map((o) => o.trim().replace(/\/$/, ''))
 
 app.use(cors({
-    origin: clientOrigin,
+    origin: (origin, callback) => {
+        // Allow requests with no origin (mobile apps, curl, Postman)
+        if (!origin) return callback(null, true)
+        if (allowedOrigins.includes(origin)) return callback(null, true)
+        callback(new Error(`CORS: origin ${origin} not allowed`))
+    },
     credentials: true,
 }))
 
