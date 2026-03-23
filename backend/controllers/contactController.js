@@ -6,6 +6,7 @@ const createTransporter = () =>
         host: 'smtp.gmail.com',
         port: 465,
         secure: true,
+        family: 4, // force IPv4 — Render's IPv6 is blocked by Gmail SMTP
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASS.replace(/\s/g, ''), // strip spaces from app password
