@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
@@ -254,8 +255,13 @@ function BlogPostForm({ post, onSave, onCancel }) {
 export default function AdminBlog() {
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState(null)
-  const [showForm, setShowForm] = useState(false)
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+
+  const view = searchParams.get('view')
+  const editId = searchParams.get('id')
+  const showForm = view === 'add' || view === 'edit'
+  const editing = editId ? posts.find((p) => p._id === editId) ?? null : null
 
   const fetchPosts = () => {
     adminApi.blog.getAll().then(setPosts).catch(() => setPosts([])).finally(() => setLoading(false))
@@ -280,7 +286,7 @@ export default function AdminBlog() {
         <h1 className="font-serif text-xl md:text-2xl lg:text-3xl text-ink-900">Blog</h1>
         <button
           type="button"
-          onClick={() => { setEditing(null); setShowForm(true) }}
+          onClick={() => navigate('?view=add')}
           className="btn-primary w-full sm:w-auto text-sm px-4 py-2"
         >
           Add post
@@ -292,8 +298,8 @@ export default function AdminBlog() {
           <h2 className="font-serif text-lg text-ink-900 mb-4">{editing ? 'Edit post' : 'New post'}</h2>
           <BlogPostForm
             post={editing}
-            onSave={() => { setShowForm(false); setEditing(null); fetchPosts() }}
-            onCancel={() => { setShowForm(false); setEditing(null) }}
+            onSave={() => { navigate('/admin/blog'); fetchPosts() }}
+            onCancel={() => navigate('/admin/blog')}
           />
         </div>
       ) : loading ? (
@@ -314,7 +320,7 @@ export default function AdminBlog() {
                   <span className="px-2 py-1 bg-blue-50 text-blue-600 rounded">💬 {p.commentsCount ?? 0}</span>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => { setEditing(p); setShowForm(true) }} className="flex-1 py-2 bg-brand-50 text-brand-600 hover:bg-brand-100 rounded-lg text-sm font-medium">Edit</button>
+                  <button type="button" onClick={() => navigate(`?view=edit&id=${p._id}`)} className="flex-1 py-2 bg-brand-50 text-brand-600 hover:bg-brand-100 rounded-lg text-sm font-medium">Edit</button>
                   <button type="button" onClick={() => handleDelete(p._id)} className="flex-1 py-2 bg-red-50 text-red-600 hover:bg-red-100 rounded-lg text-sm font-medium">Delete</button>
                 </div>
               </div>
@@ -345,7 +351,7 @@ export default function AdminBlog() {
                     <td className="py-3 px-4 text-center text-sm text-red-600">♥ {p.likesCount ?? 0}</td>
                     <td className="py-3 px-4 text-center text-sm text-blue-600">💬 {p.commentsCount ?? 0}</td>
                     <td className="py-3 px-4 text-right">
-                      <button type="button" onClick={() => { setEditing(p); setShowForm(true) }} className="text-brand-600 hover:underline mr-3">Edit</button>
+                      <button type="button" onClick={() => navigate(`?view=edit&id=${p._id}`)} className="text-brand-600 hover:underline mr-3">Edit</button>
                       <button type="button" onClick={() => handleDelete(p._id)} className="text-red-600 hover:underline">Delete</button>
                     </td>
                   </tr>

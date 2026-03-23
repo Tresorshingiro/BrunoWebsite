@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { adminApi, booksApi } from '../lib/api'
 import toast from 'react-hot-toast'
 
@@ -187,8 +188,13 @@ function BookForm({ book, onSave, onCancel }) {
 export default function AdminBooks() {
   const [books, setBooks] = useState([])
   const [loading, setLoading] = useState(true)
-  const [editing, setEditing] = useState(null)
-  const [showForm, setShowForm] = useState(false)
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+
+  const view = searchParams.get('view')
+  const editId = searchParams.get('id')
+  const showForm = view === 'add' || view === 'edit'
+  const editing = editId ? books.find((b) => b._id === editId) ?? null : null
 
   const fetchBooks = () => {
     booksApi.getAll().then(setBooks).catch(() => setBooks([])).finally(() => setLoading(false))
@@ -215,7 +221,7 @@ export default function AdminBooks() {
         <h1 className="font-serif text-lg sm:text-xl md:text-2xl lg:text-3xl text-ink-900">Books</h1>
         <button
           type="button"
-          onClick={() => { setEditing(null); setShowForm(true); }}
+          onClick={() => navigate('?view=add')}
           className="btn-primary w-full sm:w-auto text-xs sm:text-sm md:text-base px-3 sm:px-4 md:px-6 py-2 sm:py-2.5"
         >
           Add book
@@ -227,8 +233,8 @@ export default function AdminBooks() {
           <h2 className="font-serif text-base sm:text-lg text-ink-900 mb-3 sm:mb-4">{editing ? 'Edit book' : 'New book'}</h2>
           <BookForm
             book={editing}
-            onSave={() => { setShowForm(false); setEditing(null); fetchBooks(); }}
-            onCancel={() => { setShowForm(false); setEditing(null); }}
+            onSave={() => { navigate('/admin/books'); fetchBooks(); }}
+            onCancel={() => navigate('/admin/books')}
           />
         </div>
       ) : loading ? (
@@ -263,7 +269,7 @@ export default function AdminBooks() {
                 <div className="flex gap-2 mt-4 pt-4 border-t border-ink-100">
                   <button
                     type="button"
-                    onClick={() => { setEditing(book); setShowForm(true); }}
+                    onClick={() => navigate(`?view=edit&id=${book._id}`)}
                     className="flex-1 px-4 py-2 bg-brand-50 text-brand-600 hover:bg-brand-100 rounded-lg font-medium text-sm transition-colors"
                   >
                     Edit
@@ -305,7 +311,7 @@ export default function AdminBooks() {
                       <td className="py-3 px-4 text-right">
                         <button
                           type="button"
-                          onClick={() => { setEditing(book); setShowForm(true); }}
+                          onClick={() => navigate(`?view=edit&id=${book._id}`)}
                           className="text-brand-600 hover:underline mr-3"
                         >
                           Edit

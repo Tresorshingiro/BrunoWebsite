@@ -137,7 +137,7 @@ export default function AdminLayout() {
           <div className={`flex-1 min-w-0 transition-all duration-300 overflow-x-hidden ${sidebarCollapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
             {/* Top Navbar */}
             <nav className="bg-white border-b border-ink-200 sticky top-0 z-30 shadow-sm w-full">
-              <div className="px-4 sm:px-6 py-3 sm:py-4 max-w-full overflow-hidden">
+              <div className="px-4 sm:px-6 py-3 sm:py-4 max-w-full">
                 <div className="flex items-center justify-between gap-2 min-w-0">
                   <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
                     {/* Mobile Menu Button */}

@@ -44,19 +44,19 @@ function SubscribeBanner() {
         <p className="font-serif text-xl text-white mb-1">Stay in the loop</p>
         <p className="text-ink-400 text-sm">Get notified by email when Bruno publishes a new post.</p>
       </div>
-      <form onSubmit={handleSubmit} className="flex gap-2 w-full sm:w-auto">
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
         <input
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Your email address"
-          className="flex-1 sm:w-56 px-4 py-2.5 rounded-lg text-sm bg-white/10 border border-white/20 text-white placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-400"
+          className="w-full sm:w-56 px-4 py-2.5 rounded-lg text-sm bg-white/10 border border-white/20 text-white placeholder-ink-400 focus:outline-none focus:ring-2 focus:ring-brand-400"
         />
         <button
           type="submit"
           disabled={loading}
-          className="px-5 py-2.5 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-500 transition-colors disabled:opacity-50 whitespace-nowrap"
+          className="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-brand-600 text-white text-sm font-medium hover:bg-brand-500 transition-colors disabled:opacity-50"
         >
           {loading ? 'Subscribing…' : 'Subscribe'}
         </button>

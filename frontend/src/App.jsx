@@ -18,6 +18,7 @@ import BookDetail from './pages/BookDetail'
 import Blog from './pages/Blog'
 import BlogPost from './pages/BlogPost'
 import Events from './pages/Events'
+import EventDetail from './pages/EventDetail'
 import Contact from './pages/Contact'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
@@ -70,6 +71,7 @@ export default function App() {
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
               <Route path="/events" element={<Events />} />
+              <Route path="/events/:id" element={<EventDetail />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/cart" element={<ProtectedRoute><Cart /></ProtectedRoute>} />
               <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />

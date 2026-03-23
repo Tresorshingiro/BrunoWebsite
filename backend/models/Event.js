@@ -11,6 +11,9 @@ const eventSchema = new mongoose.Schema({
     isPast: { type: Boolean, default: false },
     image: { type: String },
     imagePublicId: { type: String },
+    gallery: [{ type: String }],
+    galleryPublicIds: [{ type: String }],
+    videoUrl: { type: String },
 }, { timestamps: true })
 
 // Auto-set isPast based on date

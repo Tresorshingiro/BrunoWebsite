@@ -102,6 +102,7 @@ export const blogApi = {
 }
 export const eventsApi = {
   getUpcoming: () => api.get('/api/events'),
+  getPast: () => api.get('/api/events/past'),
   getById: (id) => api.get(`/api/events/${id}`),
 }
 export const contactApi = {
