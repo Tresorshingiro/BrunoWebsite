@@ -6,6 +6,9 @@ const createTransporter = () =>
         host: 'smtp.sendgrid.net',
         port: 587,
         secure: false,
+        connectionTimeout: 10000,
+        greetingTimeout: 10000,
+        socketTimeout: 10000,
         auth: {
             user: 'apikey',
             pass: process.env.SENDGRID_API_KEY,
