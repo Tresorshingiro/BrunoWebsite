@@ -29,6 +29,7 @@ const submitContact = async (req, res) => {
 
         // Send email notification in the background
         try {
+            console.log('Attempting email — FROM:', process.env.SENDGRID_FROM_EMAIL, 'TO:', process.env.NOTIFY_EMAIL, 'API_KEY set:', !!process.env.SENDGRID_API_KEY)
             const transporter = createTransporter()
             const recipientEmail = process.env.NOTIFY_EMAIL || process.env.EMAIL_USER
             await transporter.sendMail({
@@ -118,8 +119,9 @@ ${message}
 </html>
                 `,
             })
+            console.log('Email sent successfully')
         } catch (emailErr) {
-            console.error('Email notification failed:', emailErr.message, emailErr.code, emailErr.response)
+            console.error('Email failed:', emailErr.message, emailErr.code, emailErr.responseCode, emailErr.response)
         }
     } catch (err) {
         res.status(500).json({ message: err.message })
