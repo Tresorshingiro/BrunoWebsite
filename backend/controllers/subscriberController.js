@@ -1,22 +1,15 @@
 const Subscriber = require('../models/Subscriber')
 const nodemailer = require('nodemailer')
-const dns = require('dns')
-
-// Force IPv4 DNS resolution — Render's IPv6 route to Gmail SMTP is unreachable
-const ipv4Lookup = (hostname, options, cb) => {
-    dns.resolve4(hostname, (err, addresses) => {
-        if (err) return cb(err)
-        cb(null, addresses[0], 4)
-    })
-}
 
 const createTransporter = () =>
     nodemailer.createTransport({
-        host: 'smtp.gmail.com',
+        host: 'smtp.sendgrid.net',
         port: 587,
         secure: false,
-        lookup: ipv4Lookup,
-        auth: { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS.replace(/\s/g, '') },
+        auth: {
+            user: 'apikey',
+            pass: process.env.SENDGRID_API_KEY,
+        },
     })
 
 // POST /api/subscriptions — subscribe
