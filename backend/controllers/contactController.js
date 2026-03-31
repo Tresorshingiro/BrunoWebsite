@@ -24,7 +24,10 @@ const submitContact = async (req, res) => {
         const contact = new Contact({ name, email, subject, message })
         await contact.save()
 
-        // Send email notification to Bruno's personal inbox
+        // Respond immediately so the user is not waiting on email delivery
+        res.status(201).json({ message: 'Message sent successfully' })
+
+        // Send email notification in the background
         try {
             const transporter = createTransporter()
             const recipientEmail = process.env.NOTIFY_EMAIL || process.env.EMAIL_USER
@@ -118,8 +121,6 @@ ${message}
         } catch (emailErr) {
             console.error('Email notification failed:', emailErr.message, emailErr.code, emailErr.response)
         }
-
-        res.status(201).json({ message: 'Message sent successfully' })
     } catch (err) {
         res.status(500).json({ message: err.message })
     }
