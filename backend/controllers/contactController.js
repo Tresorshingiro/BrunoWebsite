@@ -1,19 +1,6 @@
 const Contact = require('../models/Contact')
-const nodemailer = require('nodemailer')
-
-const createTransporter = () =>
-    nodemailer.createTransport({
-        host: 'smtp.sendgrid.net',
-        port: 587,
-        secure: false,
-        connectionTimeout: 10000,
-        greetingTimeout: 10000,
-        socketTimeout: 10000,
-        auth: {
-            user: 'apikey',
-            pass: process.env.SENDGRID_API_KEY,
-        },
-    })
+const sgMail = require('@sendgrid/mail')
+sgMail.setApiKey(process.env.SENDGRID_API_KEY)
 
 // POST submit contact form
 const submitContact = async (req, res) => {
@@ -33,13 +20,12 @@ const submitContact = async (req, res) => {
         // Send email notification in the background
         try {
             console.log('Attempting email — FROM:', process.env.SENDGRID_FROM_EMAIL, 'TO:', process.env.NOTIFY_EMAIL, 'API_KEY set:', !!process.env.SENDGRID_API_KEY)
-            const transporter = createTransporter()
             const recipientEmail = process.env.NOTIFY_EMAIL || process.env.EMAIL_USER
-            await transporter.sendMail({
-                from: `"Bruno's Website" <${process.env.SENDGRID_FROM_EMAIL}>`,
+            await sgMail.send({
+                from: { name: "Bruno's Website", email: process.env.SENDGRID_FROM_EMAIL },
                 to: recipientEmail,
-                replyTo: `"${name}" <${email}>`,
-                subject: `📩 New Message: ${subject}`,
+                replyTo: email,
+                subject: `New Message: ${subject}`,
                 html: `
 <!DOCTYPE html>
 <html>
