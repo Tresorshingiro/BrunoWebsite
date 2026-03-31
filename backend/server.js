@@ -19,9 +19,17 @@ const app = express()
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 
-// Support multiple allowed origins (comma-separated in CLIENT_ORIGIN env var)
-const rawOrigins = process.env.CLIENT_ORIGIN || 'http://localhost:5173'
-const allowedOrigins = rawOrigins.split(',').map((o) => o.trim().replace(/\/$/, ''))
+// Always allowed origins (hardcoded + env var)
+const envOrigins = (process.env.CLIENT_ORIGIN || '')
+    .split(',')
+    .map((o) => o.trim().replace(/\/$/, ''))
+    .filter(Boolean)
+
+const allowedOrigins = [
+    'http://localhost:5173',
+    'https://bruno-iradukunda.vercel.app',
+    ...envOrigins,
+]
 
 app.use(cors({
     origin: (origin, callback) => {
