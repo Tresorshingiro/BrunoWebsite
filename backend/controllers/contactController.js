@@ -29,7 +29,7 @@ const submitContact = async (req, res) => {
             const transporter = createTransporter()
             const recipientEmail = process.env.NOTIFY_EMAIL || process.env.EMAIL_USER
             await transporter.sendMail({
-                from: `"Bruno's Website" <${process.env.BREVO_USER}>`,
+                from: `"Bruno's Website" <${process.env.SENDGRID_FROM_EMAIL}>`,
                 to: recipientEmail,
                 replyTo: `"${name}" <${email}>`,
                 subject: `📩 New Message: ${subject}`,
