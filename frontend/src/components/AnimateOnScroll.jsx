@@ -14,7 +14,10 @@ export default function AnimateOnScroll({ children, className = '', delay = '' }
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry.isIntersecting) setVisible(true)
+        if (entry.isIntersecting) {
+          setVisible(true)
+          observer.unobserve(entry.target)
+        }
       },
       { threshold: 0.08, rootMargin: '0px 0px -30px 0px' }
     )

@@ -1,290 +1,355 @@
 import { Link } from 'react-router-dom'
-import AnimateOnScroll from '../components/AnimateOnScroll'
+import { ArrowRight, ArrowDown } from 'lucide-react'
+import Reveal from '../components/Reveal'
+import Book3D from '../components/Book3D'
+import ClipWords from '../components/ClipWords'
+import { useHeroLoad, usePointerTilt } from '../hooks/useMotion'
 
-const speakingTopics = [
-  'Forgiveness & Reconciliation',
-  'Healing from Trauma',
-  'Faith & Restoration',
-  'Genocide Awareness',
-  'Community Healing',
-  'Christian Discipleship',
-  'Personal Transformation',
-  'Rwanda & Resilience',
+const ROLES = [
+  { tag: 'Author', name: 'My Forgiveness Story', href: '#author' },
+  { tag: 'Publisher', name: 'Vitalreadings', href: '#publisher' },
+  { tag: 'Ministry', name: 'Ellel Rwanda', href: '#ministry' },
 ]
 
-export default function MyWork() {
+const BOOK_META = [
+  ['Published', '2024'],
+  ['Genre', 'Memoir · Faith'],
+  ['Publisher', 'Vitalreadings'],
+  ['Price', '20,000 RWF'],
+]
+
+const TOPICS = [
+  'Forgiveness & reconciliation',
+  'Healing from trauma',
+  'Faith & restoration',
+  'Genocide awareness',
+  'Community healing',
+  'Christian discipleship',
+  'Personal transformation',
+  'Rwanda & resilience',
+]
+
+const FORMATS = [
+  { name: 'Keynote', body: 'A 30–45 minute talk built around the testimony, adapted to your audience.' },
+  { name: 'Workshop', body: 'A longer, participatory session on the practical work of forgiveness.' },
+  { name: 'Reading & Q&A', body: 'Readings from the book followed by open conversation and signing.' },
+]
+
+/**
+ * Logo plate that leans toward the pointer.
+ *
+ * Both plates are white on purpose: each logo file carries its own baked-in
+ * background (Vitalreadings navy, Ellel white), so a coloured plate leaves a
+ * visible rectangle around the mark. White lets them sit as logos rather than
+ * as pasted images, and keeps the pair reading as a matched set.
+ */
+function OrgPlate({ src, alt, role }) {
+  const ref = usePointerTilt({ max: 7 })
   return (
-    <div className="overflow-x-hidden">
+    <div ref={ref} className="stage">
+      <div
+        className="relative aspect-[16/9] rounded-card grid place-items-center overflow-hidden p-10 bg-white border border-ink-950/10 shadow-[0_2px_10px_rgba(18,22,21,.05)]"
+        style={{
+          transform: 'rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg))',
+          transition: 'transform .45s var(--ease), box-shadow .45s var(--ease)',
+        }}
+      >
+        <span className="absolute left-4 top-4 text-[.62rem] uppercase tracking-[.2em] text-ink-500">
+          {role}
+        </span>
+        <img src={src} alt={alt} className="max-h-full max-w-full object-contain" loading="lazy" />
+      </div>
+    </div>
+  )
+}
 
-      {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <section className="relative min-h-[50vh] flex items-center bg-ink-900 text-white overflow-hidden">
-        {/* Decorative background circles */}
-        <div className="absolute -top-32 -right-32 w-[500px] h-[500px] rounded-full bg-brand-700/20 blur-3xl pointer-events-none" />
-        <div className="absolute -bottom-24 -left-24 w-[350px] h-[350px] rounded-full bg-brand-600/10 blur-2xl pointer-events-none" />
+export default function MyWork() {
+  const loaded = useHeroLoad()
 
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 py-16 md:py-20 w-full">
-          <AnimateOnScroll>
-            <p className="text-brand-400 font-medium tracking-widest uppercase text-sm mb-4">
-              What I Do
-            </p>
-            <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-semibold leading-tight mb-6 max-w-3xl">
-              My Work &amp; <span className="text-brand-400">Ministry</span>
-            </h1>
-            <div className="w-16 h-1 bg-brand-500 mb-8" />
-            <p className="text-xl text-ink-300 leading-relaxed max-w-2xl">
-              Author, publisher, and ministry partner — each role united by a single calling:
-              to inspire healing, faith, and reconciliation through the power of story.
-            </p>
-          </AnimateOnScroll>
+  return (
+    <div className={loaded ? 'loaded' : undefined}>
+      {/* ── HERO ───────────────────────────────────────────────────────── */}
+      <section className="on-dark relative bg-ink-950 text-ink-100 overflow-hidden pt-32 pb-12 md:pt-44 md:pb-20">
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            right: '-14%',
+            top: '-30%',
+            width: '58vw',
+            height: '58vw',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(31,70,60,.5) 0%, transparent 62%)',
+          }}
+          aria-hidden="true"
+        />
+        <div className="relative z-10 max-w-[1240px] mx-auto px-4 sm:px-6">
+          <p className="eyebrow hero-fade">My work &amp; ministry</p>
+          <h1 className="font-serif font-semibold tracking-tight text-[clamp(2.25rem,5.6vw,4.4rem)] leading-[1.02] mt-5 max-w-[16ch]">
+            <ClipWords text="One message, carried three" />
+            <ClipWords text="different ways" offset={4} accent />
+          </h1>
+          <p className="hero-fade text-[1.1875rem] leading-relaxed text-ink-200/70 max-w-[52ch] mt-8" data-d="2">
+            Author, publisher, ministry partner. They look like separate jobs and
+            they are not — each one is a different route to the same place: that
+            healing after harm is possible, and that someone should say so out loud.
+          </p>
         </div>
       </section>
 
-      {/* ── Role 01 — Author ─────────────────────────────────────────── */}
-      <section className="py-12 md:py-16 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <AnimateOnScroll>
-            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-              {/* Left — content */}
-              <div>
-                <span className="text-[120px] md:text-[160px] font-serif font-bold text-ink-50 leading-none select-none block -mb-8">
-                  01
-                </span>
-                <p className="text-brand-600 font-semibold tracking-widest uppercase text-sm mb-3">
-                  Author
-                </p>
-                <h2 className="font-serif text-3xl md:text-4xl text-ink-900 mb-6 leading-snug">
-                  My Forgiveness Story
-                </h2>
-                <p className="text-ink-600 text-lg leading-relaxed mb-4">
-                  A Genocide Survivor&apos;s Story of Forgiveness and the In-depth Study of the Theme — a memoir
-                  published in 2024 that chronicles the journey from the trauma of the 1994 Genocide Against
-                  the Tutsi to spiritual peace and restoration.
-                </p>
-                <p className="text-ink-600 leading-relaxed mb-8">
-                  This book is more than a personal story. It is an invitation for anyone trapped by pain or
-                  bitterness to discover that forgiveness is not only possible — it is the path to freedom.
-                </p>
-                <Link
-                  to="/books"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700 transition-colors"
+      {/* ── ROLE INDEX ─────────────────────────────────────────────────── */}
+      <section className="bg-ink-950 pb-12 md:pb-20" aria-label="Roles">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+          <div className="grid md:grid-cols-3 border-t border-ink-100/15">
+            {ROLES.map(({ tag, name, href }, i) => (
+              <Reveal key={tag} delay={i || undefined}>
+                <a
+                  href={href}
+                  className="index-item group block pt-6 pr-6 pb-6 md:pb-0 border-t border-transparent -mt-px transition-colors duration-300 ease-ease hover:border-brand-300"
                 >
-                  Explore the Book
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </Link>
-              </div>
-
-              {/* Right — book cover */}
-              <div className="relative flex items-center justify-center">
-                <div className="relative">
-                  <img
-                    src="/images/book-cover.png"
-                    alt="My Forgiveness Story book cover"
-                    className="w-56 md:w-72 rounded-2xl shadow-2xl object-cover"
-                  />
-                  <div className="absolute -bottom-4 -right-4 bg-ink-900 text-white px-4 py-2 rounded-xl shadow-xl text-sm font-medium">
-                    Published 2024
-                  </div>
-                </div>
-              </div>
-            </div>
-          </AnimateOnScroll>
-        </div>
-      </section>
-
-      {/* ── Bold Quote ───────────────────────────────────────────────── */}
-      <section className="py-14 md:py-20 bg-brand-600 text-white relative overflow-hidden">
-        <div className="absolute top-0 left-0 text-[200px] font-serif leading-none text-white/5 select-none pointer-events-none">
-          &ldquo;
-        </div>
-        <AnimateOnScroll>
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative">
-            <p className="font-serif text-2xl md:text-3xl lg:text-4xl font-light leading-relaxed text-white mb-6">
-              Stories have the power to cross every border — of culture, language, and pain —
-              and remind us that healing is always within reach.
-            </p>
-            <span className="text-brand-200 font-medium">— Bruno Iradukunda</span>
+                  <p className="text-[.68rem] uppercase tracking-[.2em] text-ink-400 mb-2">{tag}</p>
+                  <p className="font-serif text-[1.35rem] text-ink-100 flex items-center gap-2">
+                    {name}
+                    <ArrowDown className="w-4 h-4 text-brand-300 opacity-0 -translate-x-1.5 transition-all duration-300 ease-ease group-hover:opacity-100 group-hover:translate-x-0" />
+                  </p>
+                </a>
+              </Reveal>
+            ))}
           </div>
-        </AnimateOnScroll>
-      </section>
-
-      {/* ── Role 02 — Publisher ──────────────────────────────────────── */}
-      <section className="py-12 md:py-16 bg-ink-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <AnimateOnScroll>
-            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-              {/* Left — logo */}
-              <div className="relative flex items-center justify-center order-2 lg:order-1">
-                <div className="relative">
-                  <div className="w-56 h-56 md:w-72 md:h-72 rounded-3xl bg-ink-900 flex items-center justify-center shadow-2xl p-8">
-                    <img
-                      src="/images/vital_logo.jpeg"
-                      alt="Vitalreadings Publishers logo"
-                      className="w-full h-full object-contain rounded-xl"
-                    />
-                  </div>
-                  <div className="absolute -top-4 -left-4 bg-brand-600 text-white px-4 py-2 rounded-xl shadow-xl text-sm font-medium">
-                    Co-Founder
-                  </div>
-                </div>
-              </div>
-
-              {/* Right — content */}
-              <div className="order-1 lg:order-2">
-                <span className="text-[120px] md:text-[160px] font-serif font-bold text-ink-200 leading-none select-none block -mb-8">
-                  02
-                </span>
-                <p className="text-brand-600 font-semibold tracking-widest uppercase text-sm mb-3">
-                  Publisher
-                </p>
-                <h2 className="font-serif text-3xl md:text-4xl text-ink-900 mb-6 leading-snug">
-                  Vitalreadings Publishers
-                </h2>
-                <p className="text-ink-600 text-lg leading-relaxed mb-4">
-                  As Co-Founder of Vitalreadings Publishers, Bruno is committed to bringing powerful,
-                  life-changing stories to readers around the world.
-                </p>
-                <p className="text-ink-600 leading-relaxed">
-                  The publishing house focuses on books that speak to the human experience — stories of
-                  faith, resilience, and restoration that cross cultural borders and touch hearts globally.
-                </p>
-              </div>
-            </div>
-          </AnimateOnScroll>
         </div>
       </section>
 
-      {/* ── Role 03 — Ministry ──────────────────────────────────────── */}
-      <section className="py-12 md:py-16 bg-white">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <AnimateOnScroll>
-            <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-              {/* Left — content */}
-              <div>
-                <span className="text-[120px] md:text-[160px] font-serif font-bold text-ink-50 leading-none select-none block -mb-8">
-                  03
-                </span>
-                <p className="text-brand-600 font-semibold tracking-widest uppercase text-sm mb-3">
-                  Ministry
-                </p>
-                <h2 className="font-serif text-3xl md:text-4xl text-ink-900 mb-6 leading-snug">
-                  Ellel Ministries Rwanda
-                </h2>
-                <p className="text-ink-600 text-lg leading-relaxed mb-4">
-                  As an Associate Team Member of Ellel Ministries Rwanda, Bruno actively participates
-                  in ministries focused on healing and restoration.
-                </p>
-                <p className="text-ink-600 leading-relaxed">
-                  Through prayer, teaching, and personal ministry, he walks alongside individuals on
-                  their journey toward emotional and spiritual wholeness — living out the very message
-                  he writes and speaks about.
-                </p>
-              </div>
+      {/* ── AUTHOR — the lead role ─────────────────────────────────────── */}
+      <section id="author" className="bg-ink-100 band scroll-mt-20">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 grid lg:grid-cols-[.8fr_1fr] gap-10 lg:gap-20 items-center">
+          <Reveal>
+            <Book3D />
+          </Reveal>
 
-              {/* Right — logo */}
-              <div className="relative flex items-center justify-center">
-                <div className="relative">
-                  <div className="w-56 h-56 md:w-72 md:h-72 rounded-3xl bg-white flex items-center justify-center shadow-2xl border border-ink-100 p-8">
-                    <img
-                      src="/images/ellel_logo.png"
-                      alt="Ellel Ministries Rwanda logo"
-                      className="w-full h-full object-contain"
-                    />
-                  </div>
-                  <div className="absolute -bottom-4 -right-4 bg-brand-600 text-white px-4 py-2 rounded-xl shadow-xl text-sm font-medium">
-                    Healing &amp; Restoration
-                  </div>
-                </div>
-              </div>
-            </div>
-          </AnimateOnScroll>
-        </div>
-      </section>
-
-      {/* ── Speaking Topics ──────────────────────────────────────────── */}
-      <section className="py-14 md:py-20 bg-ink-900 text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(46,148,156,0.15),transparent_60%)] pointer-events-none" />
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 relative">
-          <AnimateOnScroll>
-            <div className="grid lg:grid-cols-2 gap-12 items-center">
-              <div>
-                <p className="text-brand-400 font-semibold tracking-widest uppercase text-sm mb-4">
-                  Speaking
-                </p>
-                <h2 className="font-serif text-3xl md:text-4xl mb-6 leading-snug">
-                  Available for Speaking Engagements
-                </h2>
-                <p className="text-ink-300 text-lg leading-relaxed mb-8">
-                  Bruno speaks at churches, conferences, universities, and community events — bringing
-                  a message grounded in personal experience, faith, and hope.
-                </p>
-                <Link
-                  to="/contact"
-                  className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-500 transition-colors"
-                >
-                  Book Bruno to Speak
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                  </svg>
-                </Link>
-              </div>
-
-              <div>
-                <p className="text-ink-400 text-sm uppercase tracking-widest mb-5 font-medium">
-                  Topics include
-                </p>
-                <div className="flex flex-wrap gap-3">
-                  {speakingTopics.map((topic) => (
-                    <span
-                      key={topic}
-                      className="px-4 py-2 rounded-full border border-ink-700 text-ink-300 text-sm hover:border-brand-500 hover:text-brand-400 transition-colors cursor-default"
-                    >
-                      {topic}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </AnimateOnScroll>
-        </div>
-      </section>
-
-      {/* ── CTA ──────────────────────────────────────────────────────── */}
-      <section className="py-14 md:py-20 bg-white">
-        <AnimateOnScroll>
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-            <h2 className="font-serif text-3xl md:text-4xl text-ink-900 mb-4">
-              Ready to Connect?
+          <Reveal delay={1}>
+            <p className="eyebrow">Author</p>
+            <h2 className="font-serif text-[clamp(2rem,4vw,3.1rem)] leading-[1.06] tracking-tight text-ink-950 font-semibold mt-4 max-w-[18ch]">
+              The book that started the conversation
             </h2>
-            <p className="text-ink-600 text-lg mb-10 leading-relaxed">
-              Whether you want to read the book, attend an event, or invite Bruno to speak —
-              every journey toward healing begins with a single step.
-            </p>
-            <div className="flex flex-wrap gap-4 justify-center">
-              <Link
-                to="/books"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg bg-brand-600 text-white font-medium hover:bg-brand-700 transition-colors shadow-lg shadow-brand-600/30"
-              >
-                Read My Books
+            <div className="prose-custom text-[1.1875rem] leading-[1.75] max-w-[64ch] mt-6 space-y-4">
+              <p>
+                A memoir published in 2024, tracing the road from the trauma of the
+                1994 Genocide Against the Tutsi to spiritual and emotional peace —
+                and, alongside it, a careful study of what forgiveness actually asks
+                of a person.
+              </p>
+              <p>
+                It is more than a personal account. It is an invitation to anyone
+                held by pain or bitterness to discover that forgiveness is not only
+                possible; it is the way out.
+              </p>
+            </div>
+
+            <dl className="flex flex-wrap gap-x-8 gap-y-3 border-y border-ink-950/15 py-4 my-8">
+              {BOOK_META.map(([term, value]) => (
+                <div key={term}>
+                  <dt className="text-[.66rem] uppercase tracking-[.16em] text-ink-500 mb-1">
+                    {term}
+                  </dt>
+                  <dd className="m-0 font-semibold text-[.9rem] text-ink-900">{value}</dd>
+                </div>
+              ))}
+            </dl>
+
+            <div className="flex flex-wrap gap-3">
+              <Link to="/books" className="btn-primary">
+                Explore the book <ArrowRight className="w-4 h-4 arw" />
               </Link>
-              <Link
-                to="/events"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg border-2 border-ink-200 text-ink-700 font-medium hover:border-brand-500 hover:text-brand-600 transition-colors"
-              >
-                Upcoming Events
-              </Link>
-              <Link
-                to="/contact"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg border-2 border-ink-200 text-ink-700 font-medium hover:border-brand-500 hover:text-brand-600 transition-colors"
-              >
-                Get in Touch
+              <Link to="/books" className="btn-secondary">
+                Read the first chapter
               </Link>
             </div>
-          </div>
-        </AnimateOnScroll>
+          </Reveal>
+        </div>
       </section>
 
+      {/* ── PUBLISHER + MINISTRY ───────────────────────────────────────── */}
+      <section className="bg-ink-50 band">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+          <Reveal className="mb-10 md:mb-14">
+            <p className="eyebrow">Beyond the page</p>
+            <h2 className="font-serif text-[clamp(2rem,4vw,3.1rem)] leading-[1.06] tracking-tight text-ink-950 font-semibold mt-4 max-w-[18ch]">
+              Two organisations doing the same work
+            </h2>
+          </Reveal>
+
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-12">
+            <Reveal>
+              <article id="publisher" className="flex flex-col h-full scroll-mt-24">
+                <OrgPlate
+                  src="/images/vital_logo.jpeg"
+                  alt="Vitalreadings Publishers logo"
+                  role="Co-founder"
+                />
+                <h3 className="font-serif text-[clamp(1.5rem,2.2vw,1.9rem)] leading-snug text-ink-950 mt-6 mb-1">
+                  Vitalreadings Publishers
+                </h3>
+                <p className="text-[.78rem] uppercase tracking-[.14em] text-brand-600 font-semibold mb-4">
+                  Publishing
+                </p>
+                <p className="text-[1.0625rem] leading-[1.7] text-ink-700 max-w-[46ch] mb-4">
+                  A publishing house built on the conviction that stories of faith,
+                  resilience, and restoration deserve a proper readership — and should
+                  not have to leave the region to be taken seriously.
+                </p>
+                <p className="text-[1.0625rem] leading-[1.7] text-ink-700 max-w-[46ch] mb-6">
+                  As co-founder, Bruno works to bring life-changing books to readers
+                  well beyond Rwanda.
+                </p>
+                <a
+                  href="https://vitalreadings.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="link-more mt-auto self-start"
+                >
+                  Visit Vitalreadings <ArrowRight className="w-4 h-4 arw" />
+                </a>
+              </article>
+            </Reveal>
+
+            <Reveal delay={1}>
+              <article id="ministry" className="flex flex-col h-full scroll-mt-24">
+                <OrgPlate
+                  src="/images/ellel_logo.png"
+                  alt="Ellel Ministries Rwanda logo"
+                  role="Associate team member"
+                />
+                <h3 className="font-serif text-[clamp(1.5rem,2.2vw,1.9rem)] leading-snug text-ink-950 mt-6 mb-1">
+                  Ellel Ministries Rwanda
+                </h3>
+                <p className="text-[.78rem] uppercase tracking-[.14em] text-brand-600 font-semibold mb-4">
+                  Healing &amp; restoration
+                </p>
+                <p className="text-[1.0625rem] leading-[1.7] text-ink-700 max-w-[46ch] mb-4">
+                  Through prayer, teaching, and personal ministry, Bruno walks
+                  alongside individuals on their own route toward emotional and
+                  spiritual wholeness.
+                </p>
+                <p className="text-[1.0625rem] leading-[1.7] text-ink-700 max-w-[46ch] mb-6">
+                  It is the quietest part of the work and, in his account, the part
+                  that keeps the writing honest.
+                </p>
+                <Link to="/contact" className="link-more mt-auto self-start">
+                  About Ellel Rwanda <ArrowRight className="w-4 h-4 arw" />
+                </Link>
+              </article>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* ── QUOTE ──────────────────────────────────────────────────────── */}
+      <section className="on-dark bg-brand-900 band text-center">
+        <Reveal className="max-w-[1240px] mx-auto px-4 sm:px-6">
+          <blockquote className="font-serif text-[clamp(2rem,4vw,3.1rem)] leading-[1.16] tracking-tight text-ink-100 max-w-[22ch] mx-auto">
+            Stories cross every border — of culture, language, and{' '}
+            <em className="text-brand-300">pain.</em>
+          </blockquote>
+          <cite className="block not-italic text-[.78rem] uppercase tracking-[.2em] text-ink-100/55 mt-8">
+            Bruno Iradukunda
+          </cite>
+        </Reveal>
+      </section>
+
+      {/* ── SPEAKING ───────────────────────────────────────────────────── */}
+      <section id="speaking" className="on-dark bg-ink-950 band scroll-mt-20">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-start mb-12 md:mb-20">
+            <Reveal>
+              <p className="eyebrow">Speaking</p>
+              <h2 className="font-serif text-[clamp(2rem,4vw,3.1rem)] leading-[1.06] tracking-tight text-ink-100 font-semibold mt-4 max-w-[16ch]">
+                Available for speaking engagements
+              </h2>
+              <p className="text-[1.1875rem] leading-[1.72] text-ink-200/72 max-w-[44ch] mt-6 mb-8">
+                Bruno has spoken in more than ten nations at churches, conferences,
+                universities, and community gatherings. He speaks from experience
+                rather than theory, and is comfortable with rooms where the subject
+                is difficult.
+              </p>
+              <Link to="/contact" className="btn-accent">
+                Check availability <ArrowRight className="w-4 h-4 arw" />
+              </Link>
+            </Reveal>
+
+            <Reveal delay={1}>
+              <h3 className="text-[.72rem] font-semibold uppercase tracking-[.2em] text-ink-400 mb-5">
+                Topics
+              </h3>
+              <ul className="flex flex-wrap gap-2">
+                {TOPICS.map((topic, i) => (
+                  <li
+                    key={topic}
+                    className="chip-in text-sm px-4 py-2 rounded-full border border-ink-100/15 text-ink-200/80 transition-colors duration-300 ease-ease hover:border-brand-300 hover:text-brand-300 hover:bg-brand-300/[.07]"
+                    style={{ '--chip-d': `${i * 60}ms` }}
+                  >
+                    {topic}
+                  </li>
+                ))}
+              </ul>
+            </Reveal>
+          </div>
+
+          <Reveal>
+            <h3 className="text-[.72rem] font-semibold uppercase tracking-[.2em] text-ink-400 mb-5">
+              Formats
+            </h3>
+          </Reveal>
+          <div className="grid md:grid-cols-3 gap-x-8 lg:gap-x-14 border-t border-ink-100/15">
+            {FORMATS.map(({ name, body }, i) => (
+              <Reveal
+                key={name}
+                variant="reveal-3d"
+                delay={i || undefined}
+                className="group stage"
+              >
+                <div className="py-6 transition-transform duration-500 ease-ease [transform:translateZ(0px)] group-hover:[transform:translateZ(30px)]">
+                  <h4 className="font-serif text-[1.2rem] text-ink-100 mb-2">{name}</h4>
+                  <p className="text-[.98rem] leading-relaxed text-ink-300 m-0 max-w-[34ch]">
+                    {body}
+                  </p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+
+          <Reveal className="flex flex-wrap gap-3 mt-10 md:mt-14">
+            <Link to="/contact" className="btn-ghost">
+              Request a speaker pack
+            </Link>
+            <Link to="/events" className="btn-ghost">
+              See past events
+            </Link>
+          </Reveal>
+        </div>
+      </section>
+
+      {/* ── CTA ────────────────────────────────────────────────────────── */}
+      <section className="bg-ink-50 band text-center">
+        <Reveal className="max-w-[1240px] mx-auto px-4 sm:px-6">
+          <p className="eyebrow justify-center">Next</p>
+          <h2 className="font-serif text-[clamp(2rem,4vw,3.1rem)] leading-[1.06] tracking-tight text-ink-950 font-semibold max-w-[20ch] mx-auto mt-4">
+            Where would you like to begin?
+          </h2>
+          <p className="text-[1.1875rem] leading-relaxed text-ink-700 max-w-[48ch] mx-auto mt-5 mb-9">
+            Read the book, come to an event, or write to Bruno directly.
+          </p>
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Link to="/books" className="btn-primary">
+              Read the book <ArrowRight className="w-4 h-4 arw" />
+            </Link>
+            <Link to="/events" className="btn-secondary">
+              Upcoming events
+            </Link>
+            <Link to="/contact" className="btn-secondary">
+              Get in touch
+            </Link>
+          </div>
+        </Reveal>
+      </section>
     </div>
   )
 }

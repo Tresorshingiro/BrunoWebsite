@@ -48,12 +48,13 @@ export default function App() {
             position="top-right"
             toastOptions={{
               style: {
-                background: '#1a1a1a',
-                color: '#F5EDD6',
-                border: '1px solid #2a2a2a',
+                background: '#1C2220',
+                color: '#EAE8E1',
+                border: '1px solid #343732',
+                borderRadius: '2px',
               },
-              success: { iconTheme: { primary: '#C9A84C', secondary: '#080808' } },
-              error: { iconTheme: { primary: '#ef4444', secondary: '#080808' } },
+              success: { iconTheme: { primary: '#9CD3C4', secondary: '#121615' } },
+              error: { iconTheme: { primary: '#ef4444', secondary: '#121615' } },
             }}
           />
           <ScrollToTop />

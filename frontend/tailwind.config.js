@@ -11,32 +11,44 @@ export default {
         sans: ['"Source Sans 3"', 'system-ui', 'sans-serif'],
       },
       colors: {
+        // Sampled from the cover of "My Forgiveness Story" — moss ground,
+        // aqua title. brand-600 is the lightest step that clears 4.5:1 on
+        // both white and ink-50; brand-500 is decorative / dark-ground only.
         brand: {
-          50: '#eef9f9',
-          100: '#d5f0f1',
-          200: '#afe2e4',
-          300: '#7dccd0',
-          400: '#4ab0b6',
-          500: '#2e949c',
-          600: '#287781',
-          700: '#26616a',
-          800: '#255158',
-          900: '#23434b',
-          950: '#112a30',
+          50: '#F0F7F4',
+          100: '#DCEDE7',
+          200: '#BADCD0',
+          300: '#9CD3C4', // aqua — accent on dark
+          400: '#6FB49F',
+          500: '#4E9683', // 3.49:1 on white — never body text on light
+          600: '#3A7566', // buttons, links
+          700: '#2F6154',
+          800: '#1F463C',
+          900: '#17332C', // moss
+          950: '#0E211C',
         },
         ink: {
-          50: '#f6f6f7',
-          100: '#e2e3e5',
-          200: '#c4c6ca',
-          300: '#9fa2a9',
-          400: '#7a7e87',
-          500: '#5f636c',
-          600: '#4c4f56',
-          700: '#3f4147',
-          800: '#36373c',
-          900: '#1f2023',
-          950: '#131416',
+          50: '#F4F2EC', // paper-warm
+          100: '#EAE8E1', // paper
+          200: '#D5D2C9',
+          300: '#B0ADA4',
+          400: '#85837B',
+          500: '#62615A',
+          600: '#4A4944',
+          700: '#343732',
+          800: '#242926',
+          900: '#1C2220',
+          950: '#121615', // ink
         },
+      },
+      borderRadius: {
+        // Editorial radii. Deliberately additive: existing rounded-lg/xl/2xl
+        // usages across the other pages are left untouched.
+        edge: '2px',
+        card: '3px',
+      },
+      transitionTimingFunction: {
+        ease: 'cubic-bezier(.22,.61,.36,1)',
       },
       animation: {
         'fade-in': 'fadeIn 0.6s ease-out forwards',
@@ -71,13 +83,6 @@ export default {
           '0%': { opacity: '0', transform: 'translateX(24px)' },
           '100%': { opacity: '1', transform: 'translateX(0)' },
         },
-      },
-      animationDelay: {
-        '200': '200ms',
-        '300': '300ms',
-        '400': '400ms',
-        '500': '500ms',
-        '600': '600ms',
       },
     },
   },

@@ -1,82 +1,80 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { BookOpen, Mic, ArrowRight, Quote } from 'lucide-react'
 import { blogApi } from '../lib/api'
 import AnimateOnScroll from '../components/AnimateOnScroll'
-import { BookOpen, Mic, Users, ArrowRight, Quote } from 'lucide-react'
+import Reveal from '../components/Reveal'
+import Book3D from '../components/Book3D'
+import ReachMap from '../components/ReachMap'
+import { useParallax, useCountUp } from '../hooks/useMotion'
+
+/* ── Content for the sections adapted from the mockup ──────────────────────
+   Biographical copy that changes roughly once a year; kept here rather than
+   behind an admin CRUD screen. */
+
+const ROLES = [
+  {
+    tag: 'Author',
+    title: 'Writing',
+    body: 'A memoir and an ongoing body of essays on faith, memory, and the practical work of healing after harm.',
+  },
+  {
+    tag: 'Publisher',
+    title: 'Vitalreadings',
+    body: 'Co-founder of a Rwandan publishing house bringing stories of resilience and restoration to readers beyond the region.',
+  },
+  {
+    tag: 'Ministry',
+    title: 'Ellel Rwanda',
+    body: 'Walking alongside individuals through prayer and teaching, living out the message the books describe.',
+  },
+]
+
+const TOPICS = [
+  'Forgiveness & reconciliation',
+  'Healing from trauma',
+  'Faith & restoration',
+  'Genocide awareness',
+  'Community healing',
+  'Rwanda & resilience',
+]
 
 // ── Stat pill ────────────────────────────────────────────────────────────────
+// Splits "30+" into a number to animate and a suffix to keep. Anything that
+// isn't digit-led (or reduced-motion) renders as-is — the value is never hidden
+// behind the animation.
 function StatItem({ value, label }) {
+  const match = String(value).match(/^(\d+)(.*)$/)
+  const [ref, count] = useCountUp(match ? Number(match[1]) : 0)
+
   return (
-    <div className="text-center md:text-left">
-      <p className="font-serif text-3xl md:text-4xl font-semibold text-white leading-none">
-        {value}
+    <div ref={ref} className="text-center md:text-left">
+      <p className="font-serif text-3xl md:text-4xl font-semibold text-white leading-none tabular-nums">
+        {match ? `${count}${match[2]}` : value}
       </p>
       <p className="text-ink-400 text-xs uppercase tracking-widest mt-1">{label}</p>
     </div>
   )
 }
 
-// ── Blog card ────────────────────────────────────────────────────────────────
-function BlogCard({ post, delay }) {
-  return (
-    <AnimateOnScroll delay={delay}>
-      <Link
-        to={`/blog/${post.slug}`}
-        className="group flex flex-col bg-white rounded-2xl overflow-hidden border border-ink-100 hover:border-brand-300 hover:shadow-xl transition-all duration-300 cursor-pointer h-full"
-      >
-        {post.coverImage ? (
-          <div className="relative overflow-hidden h-52">
-            <img
-              src={post.coverImage}
-              alt=""
-              loading="lazy"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-            <span className="absolute bottom-3 left-4 text-xs font-semibold text-white bg-brand-600/90 px-3 py-1 rounded-full">
-              {post.category}
-            </span>
-          </div>
-        ) : (
-          <div className="h-52 bg-gradient-to-br from-ink-100 to-ink-200 flex items-center justify-center">
-            <BookOpen className="w-10 h-10 text-ink-400" />
-          </div>
-        )}
-        <div className="p-5 flex flex-col flex-1">
-          {!post.coverImage && (
-            <span className="text-xs font-semibold text-brand-600 mb-2">{post.category}</span>
-          )}
-          <h3 className="font-serif text-xl text-ink-900 group-hover:text-brand-700 transition-colors line-clamp-2 leading-snug flex-1">
-            {post.title}
-          </h3>
-          {post.excerpt && (
-            <p className="text-ink-500 text-sm mt-2 line-clamp-2 leading-relaxed">
-              {post.excerpt}
-            </p>
-          )}
-          <div className="mt-4 flex items-center gap-1 text-brand-600 text-sm font-medium">
-            Read article
-            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-          </div>
-        </div>
-      </Link>
-    </AnimateOnScroll>
-  )
-}
-
 // ── Main component ────────────────────────────────────────────────────────────
 export default function Home() {
   const [latestPosts, setLatestPosts] = useState([])
-  const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState(false)
+
+  // Depth / 3D
+  const heroMobileRef = useParallax(0.15)
+  const heroDesktopRef = useParallax(0.15)
 
   useEffect(() => {
     blogApi
-      .getLatest()
-      .then((posts) => setLatestPosts(Array.isArray(posts) ? posts : []))
+      .getPublished({ limit: 4 })
+      .then((data) => setLatestPosts(Array.isArray(data?.posts) ? data.posts : []))
       .catch(() => setLatestPosts([]))
-      .finally(() => setLoading(false))
   }, [])
+
+  const featuredPost = latestPosts[0]
+  const sidePosts = latestPosts.slice(1, 4)
 
   return (
     <div>
@@ -84,7 +82,7 @@ export default function Home() {
       <section className="relative min-h-screen bg-ink-950 text-white overflow-hidden">
 
         {/* ── MOBILE: full-bleed portrait background ── */}
-        <div className="absolute inset-0 md:hidden" aria-hidden="true">
+        <div ref={heroMobileRef} className="absolute inset-0 md:hidden" style={{ transform: 'translateY(var(--py, 0px))' }} aria-hidden="true">
           <img
             src="/images/bruno-portrait.png"
             alt=""
@@ -95,7 +93,7 @@ export default function Home() {
         </div>
 
         {/* ── DESKTOP: proper split layout ── */}
-        <div className="hidden md:block absolute inset-0" aria-hidden="true">
+        <div ref={heroDesktopRef} className="hidden md:block absolute inset-0" style={{ transform: 'translateY(var(--py, 0px))' }} aria-hidden="true">
           {/* Right panel: portrait in its own contained area */}
           <div className="absolute right-0 top-0 bottom-0 w-[52%]">
             <img
@@ -122,7 +120,6 @@ export default function Home() {
             {/* Eyebrow */}
             <div className="animate-fade-in-up" style={{ animationDelay: '100ms', animationFillMode: 'both', opacity: 0 }}>
               <div className="inline-flex items-center gap-2 mb-6 flex-wrap">
-                <span className="block w-8 h-px bg-brand-500 flex-shrink-0" />
                 <span className="text-brand-400 text-xs font-semibold uppercase tracking-[0.18em]">
                   Author · Speaker · Forgiveness Advocate
                 </span>
@@ -235,7 +232,6 @@ export default function Home() {
           <div className="w-px h-8 bg-gradient-to-b from-ink-400 to-transparent" />
         </div>
       </section>
-
       {/* ── BOOK SPOTLIGHT ───────────────────────────────────────────────── */}
       <section className="relative py-20 md:py-28 bg-[#f7f0e8] overflow-hidden">
         {/* Decorative background text */}
@@ -253,25 +249,13 @@ export default function Home() {
 
             {/* Book image */}
             <AnimateOnScroll delay="animate-on-scroll-delay-1">
-              <div className="relative">
-                {/* Gold decorative rectangle behind image */}
-                <div className="absolute -top-4 -left-4 w-full h-full rounded-2xl border-2 border-brand-500/30" />
-                <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-                  <img
-                    src="/images/book-display.png"
-                    alt="My Forgiveness Story book display"
-                    className="w-full h-auto object-cover"
-                    loading="lazy"
-                  />
-                </div>
-              </div>
+              <Book3D />
             </AnimateOnScroll>
 
             {/* Book info */}
             <AnimateOnScroll delay="animate-on-scroll-delay-2">
               <div>
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="block w-8 h-px bg-brand-500" />
                   <span className="text-brand-400 text-xs font-semibold uppercase tracking-widest">
                     Featured Work
                   </span>
@@ -314,178 +298,191 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── IMPACT BANNER ────────────────────────────────────────────────── */}
-      <section className="bg-ink-950 py-14 border-y border-ink-800">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <AnimateOnScroll>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-4">
-              {[
-                { icon: BookOpen, value: '1', label: 'Published Book' },
-                { icon: Mic, value: '30+', label: 'Speaking Events' },
-                { icon: Users, value: '10+', label: 'Nations Reached' },
-                { icon: Quote, value: '1994', label: 'Story Begins' },
-              ].map(({ icon: Icon, value, label }) => (
-                <div key={label} className="flex flex-col items-center text-center group">
-                  <Icon className="w-5 h-5 text-brand-400 mb-3 opacity-70" />
-                  <span className="font-serif text-4xl md:text-5xl font-semibold text-white leading-none">
-                    {value}
-                  </span>
-                  <span className="text-ink-500 text-xs uppercase tracking-widest mt-2">{label}</span>
-                </div>
-              ))}
+      {/* ── THE WORK (replaces the old Impact banner) ──────────────────── */}
+      <section className="bg-ink-50 band">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+          <Reveal className="mb-10 md:mb-16 flex flex-wrap items-end justify-between gap-x-8 gap-y-6">
+            <div>
+              <p className="eyebrow">The work</p>
+              {/* Measure lives on the heading so ch resolves against its own
+                  font-size and the line break scales with the clamp. */}
+              <h2 className="font-serif text-[clamp(2rem,4vw,3.1rem)] leading-[1.05] tracking-tight text-ink-950 font-semibold mt-4 max-w-[20ch]">
+                Three ways the same message travels
+              </h2>
             </div>
-          </AnimateOnScroll>
-        </div>
-      </section>
-
-      {/* ── PROMO BANNER (dark) ───────────────────────────────────────────── */}
-      <section className="relative py-20 md:py-28 overflow-hidden bg-ink-900">
-        <div className="absolute inset-0">
-          <img
-            src="/images/book-promo.png"
-            alt=""
-            aria-hidden="true"
-            className="w-full h-full object-cover object-center opacity-20"
-            loading="lazy"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/80 to-ink-950/50" />
-        </div>
-        <AnimateOnScroll>
-          <div className="relative max-w-3xl mx-auto px-4 sm:px-6 text-center">
-            <div className="inline-flex items-center gap-2 mb-5">
-              <span className="block w-6 h-px bg-brand-500" />
-              <span className="text-brand-400 text-xs font-semibold uppercase tracking-widest">
-                A Story of Redemption
-              </span>
-              <span className="block w-6 h-px bg-brand-500" />
-            </div>
-            <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl font-semibold text-white mb-5 leading-tight">
-              From Ashes<br />
-              <span className="italic text-brand-400">to Purpose</span>
-            </h2>
-            <p className="text-ink-300 text-lg md:text-xl max-w-xl mx-auto mb-8 leading-relaxed">
-              How a genocide survivor found peace, purpose, and a mission to help the world heal.
-            </p>
-            <Link
-              to="/about"
-              className="btn-primary gap-2 cursor-pointer"
-            >
-              Discover His Journey
-              <ArrowRight className="w-4 h-4" />
+            <Link to="/my-work" className="link-more">
+              See the full body of work <ArrowRight className="w-4 h-4 arw" />
             </Link>
+          </Reveal>
+
+          <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
+            {ROLES.map(({ tag, title, body }, i) => (
+              <Reveal
+                key={title}
+                variant="reveal-3d"
+                delay={i || undefined}
+                className="group stage"
+              >
+                {/* translateZ inside the .stage perspective — a perspective-correct
+                    lift toward the viewer, not a flat scale. */}
+                <article className="border-t border-ink-950/15 pt-6 transition-[transform,border-color] duration-500 ease-ease group-hover:border-brand-600 [transform:translateZ(0px)] group-hover:[transform:translateZ(34px)]">
+                  <p className="text-[.68rem] uppercase tracking-[.2em] font-semibold text-brand-600 mb-4">
+                    {tag}
+                  </p>
+                  <h3 className="font-serif text-[clamp(1.5rem,2.2vw,1.9rem)] leading-tight text-ink-950 mb-3">
+                    {title}
+                  </h3>
+                  <p className="text-ink-700 leading-relaxed">{body}</p>
+                </article>
+              </Reveal>
+            ))}
           </div>
-        </AnimateOnScroll>
+        </div>
       </section>
 
-      {/* ── LATEST BLOG ──────────────────────────────────────────────────── */}
-      {(loading || latestPosts.length > 0) && (
-        <section className="py-16 md:py-24 bg-ink-50">
-          <div className="max-w-6xl mx-auto px-4 sm:px-6">
-            <AnimateOnScroll>
-              <div className="flex items-end justify-between mb-10">
-                <div>
-                  <div className="flex items-center gap-3 mb-3">
-                    <span className="block w-6 h-px bg-brand-500" />
-                    <span className="text-brand-400 text-xs font-semibold uppercase tracking-widest">
-                      Thoughts &amp; Reflections
-                    </span>
-                  </div>
-                  <h2 className="font-serif text-3xl md:text-4xl font-semibold text-ink-900">
-                    From the Blog
-                  </h2>
-                </div>
-                <Link
-                  to="/blog"
-                  className="hidden sm:inline-flex items-center gap-1.5 text-brand-600 font-semibold text-sm hover:text-brand-800 transition-colors group cursor-pointer"
-                >
-                  View all posts
-                  <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                </Link>
+      {/* ── WRITING (replaces the old three-equal-card blog grid) ──────── */}
+      {featuredPost && (
+        <section className="bg-ink-100 band">
+          <div className="max-w-[1240px] mx-auto px-4 sm:px-6">
+            <Reveal className="flex items-end justify-between gap-8 mb-8 md:mb-12">
+              <div>
+                <p className="eyebrow">Writing</p>
+                <h2 className="font-serif text-[clamp(2rem,4vw,3.1rem)] leading-[1.05] tracking-tight text-ink-950 font-semibold mt-4">
+                  From the journal
+                </h2>
               </div>
-            </AnimateOnScroll>
-
-            {loading ? (
-              <div className="grid md:grid-cols-3 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="rounded-2xl overflow-hidden bg-white border border-ink-100">
-                    <div className="h-52 bg-ink-100 animate-pulse" />
-                    <div className="p-5 space-y-3">
-                      <div className="h-3 bg-ink-100 rounded w-1/3 animate-pulse" />
-                      <div className="h-5 bg-ink-100 rounded w-5/6 animate-pulse" />
-                      <div className="h-4 bg-ink-100 rounded w-full animate-pulse" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="grid md:grid-cols-3 gap-6">
-                {latestPosts.map((post, i) => (
-                  <BlogCard
-                    key={post._id}
-                    post={post}
-                    delay={`animate-on-scroll-delay-${Math.min(i + 1, 3)}`}
-                  />
-                ))}
-              </div>
-            )}
-
-            <div className="mt-8 text-center sm:hidden">
-              <Link
-                to="/blog"
-                className="inline-flex items-center gap-2 text-brand-600 font-semibold text-sm cursor-pointer"
-              >
-                View all posts <ArrowRight className="w-4 h-4" />
+              <Link to="/blog" className="link-more">
+                All posts <ArrowRight className="w-4 h-4 arw" />
               </Link>
+            </Reveal>
+
+            <div className="grid lg:grid-cols-[1.5fr_1fr] gap-8 lg:gap-11">
+              <Reveal>
+                <Link to={`/blog/${featuredPost.slug}`} className="group flex flex-col h-full">
+                  <div className="relative aspect-[16/11] rounded-card overflow-hidden bg-ink-200">
+                    {featuredPost.coverImage ? (
+                      <img
+                        src={featuredPost.coverImage}
+                        alt=""
+                        loading="lazy"
+                        className="w-full h-full object-cover transition-transform duration-700 ease-ease group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <div className="w-full h-full grid place-items-center bg-gradient-to-br from-ink-300 to-ink-200">
+                        <BookOpen className="w-10 h-10 text-ink-500" />
+                      </div>
+                    )}
+                    <div
+                      className="absolute inset-0 pointer-events-none"
+                      style={{ background: 'linear-gradient(to top, rgba(12,20,18,.5), transparent 55%)' }}
+                    />
+                  </div>
+                  <p className="text-[.68rem] uppercase tracking-[.18em] font-semibold text-brand-600 mt-5 mb-2">
+                    {featuredPost.category}
+                  </p>
+                  <h3 className="font-serif text-[clamp(1.5rem,2.2vw,1.9rem)] leading-tight text-ink-950 transition-colors group-hover:text-brand-600">
+                    {featuredPost.title}
+                  </h3>
+                  {featuredPost.excerpt && (
+                    <p className="text-ink-700 leading-relaxed mt-3 line-clamp-3">
+                      {featuredPost.excerpt}
+                    </p>
+                  )}
+                  <p className="mt-auto pt-5 text-[.78rem] uppercase tracking-[.1em] text-ink-500">
+                    {featuredPost.readTime || 5} min read
+                  </p>
+                </Link>
+              </Reveal>
+
+              <div className="grid gap-6 lg:gap-9 content-start">
+                {sidePosts.map((post, i) => (
+                  <Reveal key={post._id} delay={i + 1}>
+                    <Link
+                      to={`/blog/${post.slug}`}
+                      className="group grid grid-cols-[110px_1fr] gap-4 items-start"
+                    >
+                      <div className="aspect-square rounded-card overflow-hidden bg-ink-200">
+                        {post.coverImage ? (
+                          <img
+                            src={post.coverImage}
+                            alt=""
+                            loading="lazy"
+                            className="w-full h-full object-cover transition-transform duration-700 ease-ease group-hover:scale-[1.05]"
+                          />
+                        ) : (
+                          <div className="w-full h-full grid place-items-center bg-gradient-to-br from-ink-300 to-ink-200">
+                            <BookOpen className="w-5 h-5 text-ink-500" />
+                          </div>
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-[.68rem] uppercase tracking-[.18em] font-semibold text-brand-600 mb-1.5">
+                          {post.category}
+                        </p>
+                        <h3 className="font-serif text-lg leading-snug text-ink-950 transition-colors group-hover:text-brand-600">
+                          {post.title}
+                        </h3>
+                        <p className="text-[.78rem] uppercase tracking-[.1em] text-ink-500 mt-2">
+                          {post.readTime || 4} min read
+                        </p>
+                      </div>
+                    </Link>
+                  </Reveal>
+                ))}
+              </div>
             </div>
           </div>
         </section>
       )}
 
-      {/* ── SPEAKING CTA ─────────────────────────────────────────────────── */}
-      <section className="py-20 md:py-28 bg-ink-950 text-white relative overflow-hidden">
-        {/* Gold accent blob */}
-        <div
-          className="absolute -top-32 right-0 w-96 h-96 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(40,119,129,0.12) 0%, transparent 70%)' }}
-          aria-hidden="true"
-        />
-        <div
-          className="absolute -bottom-24 -left-12 w-72 h-72 rounded-full pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(40,119,129,0.08) 0%, transparent 70%)' }}
-          aria-hidden="true"
-        />
-
-        <AnimateOnScroll>
-          <div className="relative max-w-3xl mx-auto px-4 sm:px-6 text-center">
-            <div className="inline-flex items-center gap-2 mb-5">
-              <span className="block w-6 h-px bg-brand-500/60" />
-              <Mic className="w-4 h-4 text-brand-400" />
-              <span className="block w-6 h-px bg-brand-500/60" />
-            </div>
-            <h2 className="font-serif text-4xl md:text-5xl font-semibold mb-5 leading-tight">
-              Let&apos;s Connect
+      {/* ── SPEAKING (replaces the old Promo banner + Let's Connect CTA) ── */}
+      <section className="on-dark bg-ink-950 band">
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-10 lg:gap-20 items-center">
+          <Reveal>
+            <p className="eyebrow">Speaking</p>
+            <h2 className="font-serif text-[clamp(2rem,4vw,3.1rem)] leading-[1.05] tracking-tight text-ink-100 font-semibold mt-4">
+              Bring this story
+              <br />
+              to your room
             </h2>
-            <p className="text-ink-300 text-lg md:text-xl leading-relaxed mb-10 max-w-xl mx-auto">
-              Whether you want to book a speaking engagement, share your own journey, or simply get in touch — Bruno would love to hear from you.
+            <p className="text-[1.1875rem] leading-relaxed text-ink-200/75 max-w-[42ch] mt-6 mb-8">
+              Churches, conferences, universities, and community gatherings across
+              more than ten nations. Bruno speaks from experience, not theory.
             </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <Link
-                to="/contact"
-                className="btn-primary gap-2 w-full sm:w-auto cursor-pointer"
-              >
-                <Mic className="w-4 h-4" />
-                Invite Me to Speak
-              </Link>
-              <Link
-                to="/contact"
-                className="inline-flex items-center justify-center gap-2 px-8 py-4 rounded-lg font-semibold border border-ink-700 text-ink-300 hover:border-ink-500 hover:text-white transition-colors text-sm w-full sm:w-auto cursor-pointer"
-              >
-                Get in Touch
-                <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
+            <Link to="/contact" className="btn-accent">
+              <Mic className="w-4 h-4" />
+              Invite Me to Speak <ArrowRight className="w-4 h-4 arw" />
+            </Link>
+          </Reveal>
+
+          <Reveal delay={1}>
+            <h3 className="text-[.72rem] font-semibold uppercase tracking-[.2em] text-ink-400 mb-5">
+              Topics
+            </h3>
+            <ul className="flex flex-wrap gap-2">
+              {TOPICS.map((topic, i) => (
+                <li
+                  key={topic}
+                  className="chip-in text-sm px-4 py-2 rounded-full border border-ink-100/15 text-ink-200/80 transition-colors duration-300 ease-ease hover:border-brand-300 hover:text-brand-300 hover:bg-brand-300/[.07]"
+                  style={{ '--chip-d': `${i * 70}ms` }}
+                >
+                  {topic}
+                </li>
+              ))}
+            </ul>
+          </Reveal>
+        </div>
+
+        {/* Reach map — placeholder nations, see ReachMap.jsx */}
+        <div className="max-w-[1240px] mx-auto px-4 sm:px-6 mt-14 md:mt-20">
+          <div className="flex items-end justify-between gap-6 mb-6">
+            <h3 className="text-[.72rem] font-semibold uppercase tracking-[.2em] text-ink-400">
+              Where the message has travelled
+            </h3>
           </div>
-        </AnimateOnScroll>
+          <ReachMap />
+
+        </div>
       </section>
     </div>
   )

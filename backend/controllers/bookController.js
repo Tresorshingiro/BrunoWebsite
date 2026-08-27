@@ -51,6 +51,7 @@ const createBook = async (req, res) => {
             coverImagePublicId,
             buyLinks: req.body.buyLinks ? JSON.parse(req.body.buyLinks) : [],
             chapters: req.body.chapters ? JSON.parse(req.body.chapters) : [],
+            insidePoints: req.body.insidePoints ? JSON.parse(req.body.insidePoints) : [],
         }
         if (typeof bookData.availableFormats === 'string') {
             try { bookData.availableFormats = JSON.parse(bookData.availableFormats) } catch (_) {}
@@ -91,6 +92,9 @@ const updateBook = async (req, res) => {
             coverImagePublicId,
             buyLinks: req.body.buyLinks ? JSON.parse(req.body.buyLinks) : book.buyLinks,
             chapters: req.body.chapters ? JSON.parse(req.body.chapters) : book.chapters,
+            insidePoints: req.body.insidePoints
+                ? JSON.parse(req.body.insidePoints)
+                : book.insidePoints,
         }
         if (typeof updates.availableFormats === 'string') {
             try { updates.availableFormats = JSON.parse(updates.availableFormats) } catch (_) {}

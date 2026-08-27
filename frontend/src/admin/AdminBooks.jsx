@@ -8,6 +8,7 @@ function BookForm({ book, onSave, onCancel }) {
   const [form, setForm] = useState({
     title: book?.title ?? '',
     subtitle: book?.subtitle ?? '',
+    author: book?.author ?? '',
     description: book?.description ?? '',
     genre: book?.genre ?? 'Memoir/Christian',
     publishedDate: book?.publishedDate ? new Date(book.publishedDate).toISOString().slice(0, 10) : '',
@@ -15,6 +16,15 @@ function BookForm({ book, onSave, onCancel }) {
     price: typeof book?.price === 'number' ? book.price : '',
     inStock: book?.inStock !== false,
     pages: book?.pages !== undefined && book?.pages !== null && book?.pages !== '' ? String(book.pages) : '',
+    aboutLong: book?.aboutLong ?? '',
+    // One point per line, "Title | Body" — kept as text in the form and
+    // parsed on submit, so the admin needs no repeatable-field widget.
+    insidePoints: (book?.insidePoints ?? [])
+      .map((p) => (p.body ? `${p.title} | ${p.body}` : p.title))
+      .join('\n'),
+    excerpt: book?.excerpt ?? '',
+    excerptSource: book?.excerptSource ?? '',
+    authorBio: book?.authorBio ?? '',
   })
   const [coverFile, setCoverFile] = useState(null)
   const [saving, setSaving] = useState(false)
@@ -27,6 +37,7 @@ function BookForm({ book, onSave, onCancel }) {
       fd.append('title', form.title)
       fd.append('description', form.description || ' ')
       if (form.subtitle) fd.append('subtitle', form.subtitle)
+      fd.append('author', form.author || '')
       fd.append('genre', form.genre)
       if (form.publishedDate) fd.append('publishedDate', form.publishedDate)
       fd.append('featured', form.featured ? 'true' : 'false')
@@ -35,6 +46,24 @@ function BookForm({ book, onSave, onCancel }) {
       fd.append('inStock', form.inStock ? 'true' : 'false')
       fd.append('availableFormats', JSON.stringify({ physical: true, digital: false }))
       if (form.pages !== '' && form.pages != null) fd.append('pages', String(form.pages))
+      fd.append('aboutLong', form.aboutLong || '')
+      fd.append('excerpt', form.excerpt || '')
+      fd.append('excerptSource', form.excerptSource || '')
+      fd.append('authorBio', form.authorBio || '')
+      fd.append(
+        'insidePoints',
+        JSON.stringify(
+          form.insidePoints
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean)
+            .map((line) => {
+              const [title, ...rest] = line.split('|')
+              return { title: title.trim(), body: rest.join('|').trim() }
+            })
+            .filter((p) => p.title)
+        )
+      )
       if (coverFile) fd.append('coverImage', coverFile)
       if (isEdit) {
         await adminApi.books.update(book._id, fd)
@@ -71,6 +100,20 @@ function BookForm({ book, onSave, onCancel }) {
           onChange={(e) => setForm((f) => ({ ...f, subtitle: e.target.value }))}
           className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg border border-ink-200 min-w-0"
         />
+      </div>
+      <div>
+        <label className="block text-xs sm:text-sm font-medium text-ink-700 mb-1">Author</label>
+        <input
+          type="text"
+          value={form.author}
+          onChange={(e) => setForm((f) => ({ ...f, author: e.target.value }))}
+          placeholder="Bruno Iradukunda"
+          className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg border border-ink-200 min-w-0"
+        />
+        <p className="text-xs text-ink-500 mt-1">
+          Books credited to Bruno Iradukunda lead the Books page. Anything else is
+          listed under the Vitalreadings catalogue.
+        </p>
       </div>
       <div>
         <label className="block text-xs sm:text-sm font-medium text-ink-700 mb-1">Description *</label>
@@ -173,6 +216,77 @@ function BookForm({ book, onSave, onCancel }) {
           />
         </div>
       </div>
+      {/* Detail-page content. Every field is optional — an empty one simply
+          hides its band on /books/:id, so a thin record still renders. */}
+      <fieldset className="border-t border-ink-200 pt-4 space-y-3 sm:space-y-4">
+        <legend className="text-xs sm:text-sm font-semibold text-ink-800 px-2 -ml-2">
+          Detail page content <span className="font-normal text-ink-500">(all optional)</span>
+        </legend>
+
+        <div>
+          <label className="block text-xs sm:text-sm font-medium text-ink-700 mb-1">
+            About the book
+          </label>
+          <textarea
+            rows={5}
+            value={form.aboutLong}
+            onChange={(e) => setForm((f) => ({ ...f, aboutLong: e.target.value }))}
+            placeholder="The longer description. Blank line between paragraphs."
+            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg border border-ink-200 min-w-0"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs sm:text-sm font-medium text-ink-700 mb-1">
+            What&apos;s inside
+          </label>
+          <textarea
+            rows={4}
+            value={form.insidePoints}
+            onChange={(e) => setForm((f) => ({ ...f, insidePoints: e.target.value }))}
+            placeholder={'One per line:\nThe account | What happened in 1994, told without embellishment.'}
+            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg border border-ink-200 min-w-0 font-mono"
+          />
+          <p className="text-xs text-ink-500 mt-1">
+            One point per line, as <code>Title | Description</code>. The description is optional.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-xs sm:text-sm font-medium text-ink-700 mb-1">Excerpt</label>
+          <textarea
+            rows={4}
+            value={form.excerpt}
+            onChange={(e) => setForm((f) => ({ ...f, excerpt: e.target.value }))}
+            placeholder="A short passage from the book. Blank line between paragraphs."
+            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg border border-ink-200 min-w-0"
+          />
+          <input
+            type="text"
+            value={form.excerptSource}
+            onChange={(e) => setForm((f) => ({ ...f, excerptSource: e.target.value }))}
+            placeholder="Source, e.g. My Forgiveness Story, chapter one"
+            className="w-full mt-2 px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg border border-ink-200 min-w-0"
+          />
+          <p className="text-xs text-ink-500 mt-1">
+            Must be the author&apos;s real words — this is published as a quotation from the book.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-xs sm:text-sm font-medium text-ink-700 mb-1">
+            Author biography
+          </label>
+          <textarea
+            rows={3}
+            value={form.authorBio}
+            onChange={(e) => setForm((f) => ({ ...f, authorBio: e.target.value }))}
+            placeholder="A short note on whoever wrote this book."
+            className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base rounded-lg border border-ink-200 min-w-0"
+          />
+        </div>
+      </fieldset>
+
       <div className="flex gap-2">
         <button type="submit" disabled={saving} className="btn-primary disabled:opacity-50">
           {saving ? 'Saving...' : isEdit ? 'Update book' : 'Create book'}

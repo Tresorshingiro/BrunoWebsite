@@ -1,44 +1,77 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
+import { ArrowLeft, ArrowRight, MapPin, Clock, CalendarDays, X } from 'lucide-react'
 import { eventsApi } from '../lib/api'
+import { cldResize, cldSrcSet } from '../lib/images'
+import Reveal from '../components/Reveal'
+import ClipWords from '../components/ClipWords'
+
+/* ─────────────────────────────────────────────────────────────────────────
+   EVENT DETAIL
+
+   The page reads differently either side of the date: an upcoming event
+   leads with registration, a past one leads with what happened. Sections
+   whose data is absent (recording, gallery) are not rendered at all —
+   never a heading with an empty player under it.
+   ───────────────────────────────────────────────────────────────────────── */
 
 function formatDate(d) {
-  return new Date(d).toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  const date = new Date(d)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toLocaleDateString('en-GB', {
+    weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 }
 
 function getEmbedUrl(url) {
   if (!url) return null
-  // YouTube
-  const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)
-  if (ytMatch) return `https://www.youtube.com/embed/${ytMatch[1]}`
-  // Vimeo
-  const vimeoMatch = url.match(/vimeo\.com\/(\d+)/)
-  if (vimeoMatch) return `https://player.vimeo.com/video/${vimeoMatch[1]}`
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&\s]+)/)
+  if (yt) return `https://www.youtube.com/embed/${yt[1]}`
+  const vimeo = url.match(/vimeo\.com\/(\d+)/)
+  if (vimeo) return `https://player.vimeo.com/video/${vimeo[1]}`
   return null
 }
 
 export default function EventDetail() {
   const { id } = useParams()
   const [event, setEvent] = useState(null)
+  const [others, setOthers] = useState([])
   const [loading, setLoading] = useState(true)
   const [lightbox, setLightbox] = useState(null)
 
   useEffect(() => {
-    eventsApi.getById(id)
+    setLoading(true)
+    eventsApi
+      .getById(id)
       .then(setEvent)
       .catch(() => setEvent(null))
       .finally(() => setLoading(false))
   }, [id])
 
+  useEffect(() => {
+    if (!event) return
+    const past = new Date(event.date) < new Date()
+    const load = past ? eventsApi.getPast() : eventsApi.getUpcoming()
+    load
+      .then((list) => setOthers((Array.isArray(list) ? list : []).filter((e) => e._id !== id).slice(0, 3)))
+      .catch(() => setOthers([]))
+  }, [event, id])
+
+  // Escape closes the lightbox.
+  useEffect(() => {
+    if (!lightbox) return
+    const onKey = (e) => e.key === 'Escape' && setLightbox(null)
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lightbox])
+
   if (loading) {
     return (
-      <div className="py-20 max-w-4xl mx-auto px-4 sm:px-6">
-        <div className="h-8 bg-ink-100 rounded w-48 mb-6 animate-pulse" />
-        <div className="h-64 bg-ink-100 rounded-2xl animate-pulse mb-6" />
-        <div className="space-y-3">
-          {[1,2,3].map(i => <div key={i} className="h-4 bg-ink-100 rounded animate-pulse" />)}
+      <div className="bg-ink-950 pt-32 md:pt-44 pb-24">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 space-y-5">
+          <div className="h-4 w-28 bg-ink-800 rounded animate-pulse" />
+          <div className="h-12 w-3/4 bg-ink-800 rounded animate-pulse" />
+          <div className="h-6 w-1/2 bg-ink-800/70 rounded animate-pulse" />
         </div>
       </div>
     )
@@ -46,177 +79,303 @@ export default function EventDetail() {
 
   if (!event) {
     return (
-      <div className="py-20 text-center">
-        <p className="text-ink-500 mb-4">Event not found.</p>
-        <Link to="/events" className="text-brand-600 hover:underline">← Back to Events</Link>
+      <div className="bg-ink-950 text-ink-100 pt-32 md:pt-44 pb-24 text-center">
+        <p className="text-ink-100/70">Event not found.</p>
+        <Link to="/events" className="link-more mt-4 justify-center">
+          Back to events <ArrowRight size={15} className="arw" />
+        </Link>
       </div>
     )
   }
 
   const isPast = new Date(event.date) < new Date()
+  const online = event.type === 'online'
   const embedUrl = getEmbedUrl(event.videoUrl)
+  const gallery = event.gallery || []
+  const date = formatDate(event.date)
 
   return (
-    <div className="py-12 md:py-20">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6">
-
-        {/* Back */}
-        <Link to="/events" className="inline-flex items-center gap-1.5 text-brand-600 hover:text-brand-700 text-sm font-medium mb-8">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Back to Events
+    <div>
+      {/* ── HEAD ───────────────────────────────────────────────────────── */}
+      <header className="on-dark canvas relative bg-ink-950 text-ink-100 overflow-hidden pt-32 pb-12 md:pt-44 md:pb-16">
+        <div
+          aria-hidden="true"
+          className="full pointer-events-none absolute"
+          style={{
+            right: '-18%',
+            top: '-38%',
+            width: '62vw',
+            height: '62vw',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(31,70,60,.5) 0%, transparent 62%)',
+          }}
+        />
+        <Link
+          to="/events"
+          className="wide relative z-10 inline-flex items-center gap-2 text-sm font-medium text-ink-100/60 hover:text-brand-300 transition-colors mb-8"
+        >
+          <ArrowLeft size={15} />
+          Back to events
         </Link>
 
-        {/* Hero image */}
-        {event.image && (
-          <div className="rounded-2xl overflow-hidden mb-8">
-            <img src={event.image} alt={event.title} className="w-full h-64 md:h-80 object-cover" />
-          </div>
-        )}
-
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <span className={`text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${
-              isPast ? 'bg-ink-100 text-ink-600' : 'bg-brand-50 text-brand-700'
-            }`}>
-              {isPast ? 'Past Event' : 'Upcoming'}
-            </span>
-            <span className={`text-xs font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full ${
-              event.type === 'online' ? 'bg-teal-50 text-teal-700' : 'bg-brand-50 text-brand-700'
-            }`}>
-              {event.type === 'online' ? 'Online' : 'In Person'}
-            </span>
-          </div>
-          <h1 className="font-serif text-3xl md:text-4xl text-ink-900 mb-4">{event.title}</h1>
-
-          <div className="flex flex-col sm:flex-row gap-4 text-ink-600">
-            <span className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-brand-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              {formatDate(event.date)}
-            </span>
-            <span className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-brand-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {event.time}
-            </span>
-            <span className="flex items-center gap-2">
-              <svg className="w-5 h-5 text-brand-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              {event.location}
-            </span>
-          </div>
+        <div className="wide relative z-10 flex flex-wrap gap-1.5 mb-5">
+          {isPast && <span className="badge b-past">This event has passed</span>}
+          <span className={`badge ${online ? 'b-online' : 'b-inperson'}`}>
+            {online ? 'Online' : 'In person'}
+          </span>
         </div>
 
-        {/* Description */}
-        {event.description && (
-          <div className="prose prose-ink max-w-none mb-10">
-            <p className="text-ink-700 text-lg leading-relaxed whitespace-pre-line">{event.description}</p>
-          </div>
-        )}
+        <h1 className="wide relative z-10 font-serif text-4xl md:text-5xl font-semibold leading-[1.07] tracking-tight max-w-[20ch]">
+          <ClipWords text={event.title} selfStart />
+        </h1>
 
-        {/* Register button (upcoming only) */}
+        <div className="wide relative z-10 flex flex-wrap gap-x-7 gap-y-3 mt-7 text-ink-100/70">
+          <span className="inline-flex items-center gap-2">
+            <CalendarDays size={15} className="text-brand-300 shrink-0" />
+            {date}
+            {event.time && ` · ${event.time}`}
+          </span>
+          <span className="inline-flex items-center gap-2">
+            <MapPin size={15} className="text-brand-300 shrink-0" />
+            {event.location}
+          </span>
+        </div>
+
         {!isPast && event.registrationLink && (
-          <div className="mb-10">
+          <div className="wide relative z-10 mt-8">
             <a
               href={event.registrationLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white font-medium px-6 py-3 rounded-lg transition-colors"
+              className="btn-accent"
             >
-              Register for this Event
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
+              Reserve a seat <ArrowRight size={16} className="arw" />
             </a>
           </div>
         )}
+      </header>
 
-        {/* Video embed */}
-        {embedUrl && (
-          <div className="mb-10">
-            <h2 className="font-serif text-xl text-ink-900 mb-4">{isPast ? 'Event Recording' : 'Preview'}</h2>
-            <div className="relative rounded-2xl overflow-hidden" style={{ paddingTop: '56.25%' }}>
+      {/* ── HERO IMAGE — breaks out to the wide track ──────────────────── */}
+      {event.image && (
+        <div className="canvas bg-ink-100 pt-10 md:pt-14">
+          <figure className="wide m-0">
+            <img
+              src={cldResize(event.image, 1000)}
+              srcSet={cldSrcSet(event.image, 1000)}
+              alt=""
+              loading="eager"
+              decoding="async"
+              fetchpriority="high"
+              className="w-full rounded-card aspect-[16/9] object-cover"
+            />
+          </figure>
+        </div>
+      )}
+
+      {/* ── DESCRIPTION ────────────────────────────────────────────────── */}
+      <section className="canvas bg-ink-100 pt-10 md:pt-14 pb-12 md:pb-16">
+        <Reveal>
+          <h2 className="font-serif text-3xl font-semibold text-ink-950 mb-6">
+            {isPast ? 'What happened' : 'About this event'}
+          </h2>
+          <div className="post-body">
+            {event.description
+              .split(/\n{2,}/)
+              .map((p) => p.trim())
+              .filter(Boolean)
+              .map((para, i) => (
+                <p key={i}>{para}</p>
+              ))}
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ── RECORDING — only when there is one ─────────────────────────── */}
+      {embedUrl && (
+        <section className="canvas bg-ink-50 py-12 md:py-16">
+          <Reveal className="wide">
+            <h2 className="font-serif text-3xl font-semibold text-ink-950 mb-6">
+              {isPast ? 'Watch the recording' : 'Preview'}
+            </h2>
+          </Reveal>
+          <Reveal className="wide">
+            <div className="ev-player">
               <iframe
                 src={embedUrl}
-                title="Event video"
-                className="absolute inset-0 w-full h-full"
-                frameBorder="0"
+                title={`${event.title} — video`}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
+                loading="lazy"
               />
             </div>
-          </div>
-        )}
+          </Reveal>
+        </section>
+      )}
 
-        {/* Photo gallery */}
-        {event.gallery?.length > 0 && (
-          <div className="mb-10">
-            <h2 className="font-serif text-xl text-ink-900 mb-4">{isPast ? 'Event Photos' : 'Gallery'}</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {event.gallery.map((img, i) => (
+      {/* ── GALLERY — only when there are photographs ──────────────────── */}
+      {gallery.length > 0 && (
+        <section className="canvas bg-ink-100 py-12 md:py-16">
+          <Reveal className="wide">
+            <h2 className="font-serif text-3xl font-semibold text-ink-950 mb-6">
+              {isPast ? 'From the evening' : 'Gallery'}
+            </h2>
+          </Reveal>
+          <Reveal className="wide">
+            <div className="ev-tiles">
+              {gallery.map((src, i) => (
                 <button
-                  key={i}
+                  key={src}
                   type="button"
-                  onClick={() => setLightbox(i)}
-                  className="block rounded-xl overflow-hidden aspect-square focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  className="ev-tile"
+                  onClick={() => setLightbox(src)}
+                  aria-label={`Open photograph ${i + 1}`}
                 >
-                  <img src={img} alt={`Event photo ${i + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                  <img
+                    src={cldResize(src, 400)}
+                    srcSet={cldSrcSet(src, 400)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </button>
               ))}
             </div>
+          </Reveal>
+        </section>
+      )}
+
+      {/* ── NEXT STEPS ─────────────────────────────────────────────────── */}
+      <section className="canvas bg-ink-50 py-12 md:py-16 stage">
+        <Reveal className="wide">
+          <h2 className="font-serif text-3xl font-semibold text-ink-950 mb-2">
+            {isPast ? 'Missed it?' : 'Before you come'}
+          </h2>
+          <p className="text-ink-600 mb-8">
+            {isPast
+              ? 'Three ways to pick up where this left off.'
+              : 'Three things worth knowing.'}
+          </p>
+        </Reveal>
+        <Reveal className="wide">
+          <div className="grid sm:grid-cols-3 gap-4">
+            {[
+              {
+                title: 'Read the book',
+                body: 'Everything Bruno reads from, plus the study half that follows it.',
+                to: '/books',
+                cta: 'My Forgiveness Story',
+              },
+              {
+                title: isPast ? 'Come to the next one' : 'See what else is on',
+                body: 'Readings happen every few months, and subscribers hear the date first.',
+                to: '/events',
+                cta: 'All events',
+              },
+              {
+                title: 'Host one yourself',
+                body: 'Bruno speaks at churches, schools, and community gatherings across the region.',
+                to: '/contact',
+                cta: 'Invite Bruno to speak',
+              },
+            ].map((step) => (
+              <div
+                key={step.title}
+                className="bk-lift border border-ink-950/[.14] rounded-card p-6 bg-white/50"
+              >
+                <h3 className="font-serif text-xl font-semibold text-ink-950 mb-2">{step.title}</h3>
+                <p className="text-ink-600 leading-relaxed mb-4">{step.body}</p>
+                <Link to={step.to} className="link-more">
+                  {step.cta} <ArrowRight size={15} className="arw" />
+                </Link>
+              </div>
+            ))}
           </div>
-        )}
+        </Reveal>
+      </section>
 
-      </div>
+      {/* ── MORE EVENTS ────────────────────────────────────────────────── */}
+      {others.length > 0 && (
+        <section className="bg-ink-100 band">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <Reveal className="mb-8">
+              <p className="eyebrow">Also on</p>
+              <h2 className="section-heading mt-4 mb-0">
+                {isPast ? 'Other past events' : 'Other upcoming events'}
+              </h2>
+            </Reveal>
+            <div className={`ev-rows ${isPast ? 'is-past' : ''}`}>
+              {others.map((ev) => {
+                const d = new Date(ev.date)
+                return (
+                  <Reveal as="div" key={ev._id}>
+                    <Link to={`/events/${ev._id}`} className="ev-row group stage">
+                      <div className="ev-date">
+                        <div className="m">{d.toLocaleDateString('en-US', { month: 'short' })}</div>
+                        <div className="d">{String(d.getDate()).padStart(2, '0')}</div>
+                        <div className="y">{d.getFullYear()}</div>
+                      </div>
+                      <div className="ev-media">
+                        {ev.image && (
+                          <img
+                            src={cldResize(ev.image, 260)}
+                            srcSet={cldSrcSet(ev.image, 260)}
+                            alt=""
+                            loading="lazy"
+                          />
+                        )}
+                      </div>
+                      <div>
+                        <h3 className="font-serif text-2xl font-semibold text-ink-950 leading-tight transition-colors group-hover:text-brand-700">
+                          {ev.title}
+                        </h3>
+                        <div className="ev-where mt-2">
+                          <span>
+                            <MapPin size={14} className="text-brand-600 shrink-0" />
+                            {ev.location}
+                          </span>
+                          {ev.time && (
+                            <span>
+                              <Clock size={14} className="text-brand-600 shrink-0" />
+                              {ev.time}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="ev-go">
+                        <span className="btn-secondary">
+                          View <ArrowRight size={15} className="arw" />
+                        </span>
+                      </div>
+                    </Link>
+                  </Reveal>
+                )
+              })}
+            </div>
+          </div>
+        </section>
+      )}
 
-      {/* Lightbox */}
-      {lightbox !== null && (
+      {/* ── LIGHTBOX ───────────────────────────────────────────────────── */}
+      {lightbox && (
         <div
-          className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Photograph"
+          className="fixed inset-0 z-[70] bg-ink-950/92 backdrop-blur-sm grid place-items-center p-4"
           onClick={() => setLightbox(null)}
         >
           <button
             type="button"
             onClick={() => setLightbox(null)}
-            className="absolute top-4 right-4 text-white/70 hover:text-white"
+            aria-label="Close"
+            className="absolute top-5 right-5 w-11 h-11 grid place-items-center rounded-full border border-ink-100/25 text-ink-100 hover:border-brand-300 hover:text-brand-300 transition-colors"
           >
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+            <X size={19} />
           </button>
-          {lightbox > 0 && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setLightbox(lightbox - 1) }}
-              className="absolute left-4 text-white/70 hover:text-white"
-            >
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-          )}
-          {lightbox < event.gallery.length - 1 && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setLightbox(lightbox + 1) }}
-              className="absolute right-4 text-white/70 hover:text-white"
-            >
-              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          )}
           <img
-            src={event.gallery[lightbox]}
+            src={cldResize(lightbox, 1400)}
             alt=""
-            className="max-w-full max-h-[85vh] object-contain rounded-lg"
+            className="max-w-full max-h-[86vh] rounded-card"
             onClick={(e) => e.stopPropagation()}
           />
         </div>

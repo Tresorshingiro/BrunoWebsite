@@ -1,398 +1,517 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { eventsApi } from '../lib/api'
+import { ArrowRight, MapPin, Clock, ChevronLeft, ChevronRight, CalendarDays } from 'lucide-react'
+import { eventsApi, subscribeApi } from '../lib/api'
+import { cldResize, cldSrcSet } from '../lib/images'
+import Reveal from '../components/Reveal'
+import ClipWords from '../components/ClipWords'
+import { useHeroLoad, usePointerTilt } from '../hooks/useMotion'
+import toast from 'react-hot-toast'
 
-function formatDate(d) {
-  return new Date(d).toLocaleDateString('en-US', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  })
+const FORMATS = [
+  { name: 'Keynote', body: 'A 30–45 minute talk built around the testimony, adapted to your audience.' },
+  { name: 'Workshop', body: 'A longer, participatory session on the practical work of forgiveness.' },
+  { name: 'Reading & Q&A', body: 'Readings from the book, open conversation, and signing afterwards.' },
+]
+
+const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const MONTHS = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+]
+
+const dayKey = (d) => {
+  const date = new Date(d)
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`
 }
 
-function formatShortDate(d) {
+const parts = (d) => {
   const date = new Date(d)
   return {
-    day: date.toLocaleDateString('en-US', { day: '2-digit' }),
-    month: date.toLocaleDateString('en-US', { month: 'short' }).toUpperCase(),
-    year: date.getFullYear(),
+    m: date.toLocaleDateString('en-US', { month: 'short' }),
+    d: String(date.getDate()).padStart(2, '0'),
+    y: date.getFullYear(),
+    full: date.toLocaleDateString('en-GB', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    }),
   }
 }
 
-function CalendarBadge({ date }) {
-  const { day, month, year } = formatShortDate(date)
-  return (
-    <div className="flex-shrink-0 w-16 text-center">
-      <div className="bg-brand-600 text-white text-xs font-bold uppercase tracking-wider py-1 rounded-t-lg">{month}</div>
-      <div className="bg-white border border-t-0 border-ink-200 rounded-b-lg py-1">
-        <span className="block text-2xl font-bold text-ink-900 leading-none">{day}</span>
-        <span className="block text-xs text-ink-400">{year}</span>
-      </div>
-    </div>
-  )
-}
+/* ── One event row. The date block leans out on hover; the photo tilts. ──── */
+function EventRow({ event, past, delay }) {
+  const mediaRef = usePointerTilt({ max: 6 })
+  const p = parts(event.date)
+  const online = event.type === 'online'
 
-function UpcomingCard({ event }) {
   return (
-    <div className="flex gap-4 sm:gap-6 p-5 sm:p-6 bg-white rounded-2xl border border-ink-100 hover:shadow-md transition-shadow">
-      <CalendarBadge date={event.date} />
-      <div className="flex-1 min-w-0">
-        <div className="flex flex-wrap items-center gap-2 mb-1">
-          <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-            event.type === 'online' ? 'bg-teal-50 text-teal-700' : 'bg-brand-50 text-brand-700'
-          }`}>
-            {event.type === 'online' ? 'Online' : 'In Person'}
-          </span>
+    <Reveal as="div" delay={delay}>
+      <Link to={`/events/${event._id}`} className="ev-row group stage">
+        <div className="ev-date">
+          <div className="m">{p.m}</div>
+          <div className="d">{p.d}</div>
+          <div className="y">{p.y}</div>
         </div>
-        <h2 className="font-serif text-xl text-ink-900 leading-snug mb-1">{event.title}</h2>
-        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-ink-500 mb-2">
-          <span className="flex items-center gap-1.5">
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            {event.time}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            {event.location}
-          </span>
-        </div>
-        {event.description && (
-          <p className="text-ink-600 text-sm leading-relaxed line-clamp-2 mb-3">{event.description}</p>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <Link
-            to={`/events/${event._id}`}
-            className="inline-flex items-center gap-1.5 border border-brand-600 text-brand-600 hover:bg-brand-50 text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-          >
-            More Info
-          </Link>
-          {event.registrationLink && (
-            <a
-              href={event.registrationLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 bg-brand-600 hover:bg-brand-500 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
-            >
-              Register Now
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-              </svg>
-            </a>
+
+        <div ref={mediaRef} className="ev-media">
+          {event.image && (
+            <img
+              src={cldResize(event.image, 260)}
+              srcSet={cldSrcSet(event.image, 260)}
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
           )}
         </div>
-      </div>
-    </div>
-  )
-}
 
-function PastCard({ event }) {
-  return (
-    <div className="bg-white rounded-2xl border border-ink-100 overflow-hidden hover:shadow-md transition-shadow">
-      {event.image ? (
-        <div className="relative">
-          <img src={event.image} alt={event.title} className="w-full h-48 object-cover" />
-          <div className="absolute inset-0 bg-gradient-to-t from-ink-900/50 to-transparent" />
-          <div className="absolute bottom-3 left-4">
-            <span className={`text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full ${
-              event.type === 'online' ? 'bg-teal-600 text-white' : 'bg-brand-600 text-white'
-            }`}>
-              {event.type === 'online' ? 'Online' : 'In Person'}
+        <div>
+          <div className="flex flex-wrap gap-1.5 mb-2.5">
+            <span className={`badge ${online ? 'b-online' : 'b-inperson'}`}>
+              {online ? 'Online' : 'In person'}
             </span>
+            {past && <span className="badge b-past">Past</span>}
           </div>
+          <h3 className="font-serif text-2xl md:text-3xl font-semibold text-ink-950 leading-tight transition-colors group-hover:text-brand-700">
+            {event.title}
+          </h3>
+          <div className="ev-where mt-2.5 mb-2">
+            <span>
+              <MapPin size={14} className="text-brand-600 shrink-0" />
+              {event.location}
+            </span>
+            {event.time && (
+              <span>
+                <Clock size={14} className="text-brand-600 shrink-0" />
+                {event.time}
+              </span>
+            )}
+          </div>
+          {event.description && (
+            <p className="text-ink-600 leading-relaxed max-w-[48ch] line-clamp-2">
+              {event.description}
+            </p>
+          )}
         </div>
-      ) : (
-        <div className="w-full h-32 bg-gradient-to-br from-ink-100 to-ink-200 flex items-center justify-center">
-          <svg className="w-10 h-10 text-ink-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
+
+        <div className="ev-go">
+          <span className={past ? 'btn-secondary' : 'btn-primary'}>
+            {past ? 'View details' : 'View event'} <ArrowRight size={15} className="arw" />
+          </span>
         </div>
-      )}
-      <div className="p-5">
-        <p className="text-xs text-ink-400 mb-1">{formatDate(event.date)}</p>
-        <h3 className="font-serif text-lg text-ink-900 leading-snug mb-2">{event.title}</h3>
-        <p className="text-ink-500 text-sm flex items-center gap-1.5 mb-3">
-          <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
-          {event.location}
-        </p>
-        {event.description && (
-          <p className="text-ink-600 text-sm leading-relaxed line-clamp-2 mb-3">{event.description}</p>
-        )}
-        <Link
-          to={`/events/${event._id}`}
-          className="inline-flex items-center gap-1 text-brand-600 hover:text-brand-700 text-sm font-medium"
-        >
-          View Details
-          <svg className="w-4 h-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
-      </div>
-    </div>
+      </Link>
+    </Reveal>
   )
 }
 
-// Full calendar with inline events
-function MonthCalendar({ upcoming, past }) {
-  const allEvents = [...upcoming, ...past]
+/* ── Month calendar ───────────────────────────────────────────────────────
+   Kept at the owner's request. The risk with a month grid on a site with a
+   handful of events a year is that an empty month reads as a broken feature,
+   so a quiet month says so in words and the grid stays calm. */
+function MonthCalendar({ events }) {
   const today = new Date()
-  const [viewDate, setViewDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
+  const [view, setView] = useState(new Date(today.getFullYear(), today.getMonth(), 1))
+  const [turn, setTurn] = useState(0)
 
-  const year = viewDate.getFullYear()
-  const month = viewDate.getMonth()
+  const year = view.getFullYear()
+  const month = view.getMonth()
+
+  const byDay = useMemo(() => {
+    const map = new Map()
+    events.forEach((ev) => {
+      const key = dayKey(ev.date)
+      if (!map.has(key)) map.set(key, [])
+      map.get(key).push(ev)
+    })
+    return map
+  }, [events])
+
+  const move = (delta) => {
+    setView(new Date(year, month + delta, 1))
+    setTurn((t) => t + 1)
+  }
+
   const firstDay = new Date(year, month, 1).getDay()
   const daysInMonth = new Date(year, month + 1, 0).getDate()
-  const monthName = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  const cells = [
+    ...Array.from({ length: firstDay }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ]
 
-  const prevMonth = () => setViewDate(new Date(year, month - 1, 1))
-  const nextMonth = () => setViewDate(new Date(year, month + 1, 1))
-  const goToday = () => setViewDate(new Date(today.getFullYear(), today.getMonth(), 1))
-
-  // Map events by date key
-  const eventsByDate = {}
-  allEvents.forEach((ev) => {
+  const monthEvents = events.filter((ev) => {
     const d = new Date(ev.date)
-    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
-    if (!eventsByDate[key]) eventsByDate[key] = []
-    eventsByDate[key].push(ev)
+    return d.getFullYear() === year && d.getMonth() === month
   })
 
-  // Build grid: pad start with nulls, fill days
-  const cells = []
-  for (let i = 0; i < firstDay; i++) cells.push(null)
-  for (let d = 1; d <= daysInMonth; d++) cells.push(d)
-  // Pad end to complete last row
-  while (cells.length % 7 !== 0) cells.push(null)
-
-  const weeks = []
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
-
   return (
-    <div className="overflow-x-auto">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 min-w-[560px]">
+    <div className="cal">
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <h3 className="font-serif text-2xl md:text-3xl font-semibold text-ink-950">
+          {MONTHS[month]} <span className="text-ink-400">{year}</span>
+        </h3>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={prevMonth}
-            className="p-2 rounded-lg hover:bg-ink-100 transition-colors">
-            <svg className="w-5 h-5 text-ink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
+          <button
+            type="button"
+            onClick={() => move(-1)}
+            aria-label="Previous month"
+            className="w-10 h-10 grid place-items-center rounded-edge border border-ink-950/[.14] text-ink-600 hover:border-brand-600 hover:text-brand-700 transition-colors"
+          >
+            <ChevronLeft size={17} />
           </button>
-          <button type="button" onClick={nextMonth}
-            className="p-2 rounded-lg hover:bg-ink-100 transition-colors">
-            <svg className="w-5 h-5 text-ink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-          <button type="button" onClick={goToday}
-            className="px-3 py-1.5 text-sm border border-ink-200 rounded-lg hover:bg-ink-50 text-ink-600 transition-colors">
+          <button
+            type="button"
+            onClick={() => {
+              setView(new Date(today.getFullYear(), today.getMonth(), 1))
+              setTurn((t) => t + 1)
+            }}
+            className="px-3 h-10 rounded-edge border border-ink-950/[.14] text-sm font-semibold text-ink-600 hover:border-brand-600 hover:text-brand-700 transition-colors"
+          >
             Today
           </button>
+          <button
+            type="button"
+            onClick={() => move(1)}
+            aria-label="Next month"
+            className="w-10 h-10 grid place-items-center rounded-edge border border-ink-950/[.14] text-ink-600 hover:border-brand-600 hover:text-brand-700 transition-colors"
+          >
+            <ChevronRight size={17} />
+          </button>
         </div>
-        <h3 className="font-serif text-xl text-ink-900">{monthName}</h3>
-        <div className="w-32" />
       </div>
 
-      {/* Calendar grid */}
-      <div className="min-w-[560px] border border-ink-200 rounded-xl overflow-hidden">
-        {/* Day headers */}
-        <div className="grid grid-cols-7 bg-ink-50 border-b border-ink-200">
-          {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d) => (
-            <div key={d} className="text-center text-xs font-semibold text-ink-500 py-2.5 border-r border-ink-200 last:border-r-0">
-              {d}
-            </div>
-          ))}
-        </div>
-
-        {/* Weeks */}
-        {weeks.map((week, wi) => (
-          <div key={wi} className="grid grid-cols-7 border-b border-ink-200 last:border-b-0">
-            {week.map((day, di) => {
-              if (!day) {
-                return (
-                  <div key={`e-${wi}-${di}`}
-                    className="min-h-[90px] bg-ink-50/50 border-r border-ink-200 last:border-r-0" />
-                )
-              }
-              const key = `${year}-${month}-${day}`
-              const evs = eventsByDate[key] || []
-              const isToday = today.getFullYear() === year && today.getMonth() === month && today.getDate() === day
-
-              return (
-                <div key={day}
-                  className="min-h-[90px] p-1.5 border-r border-ink-200 last:border-r-0 bg-white align-top">
-                  {/* Day number */}
-                  <div className={`text-xs font-semibold w-6 h-6 flex items-center justify-center rounded-full mb-1 ${
-                    isToday
-                      ? 'bg-brand-600 text-white'
-                      : 'text-ink-500'
-                  }`}>
-                    {day}
-                  </div>
-
-                  {/* Events */}
-                  <div className="space-y-0.5">
-                    {evs.map((ev) => {
-                      const isPastEv = new Date(ev.date) < new Date()
-                      return (
-                        <Link
-                          key={ev._id}
-                          to={`/events/${ev._id}`}
-                          className={`block w-full text-left px-1.5 py-0.5 rounded text-xs leading-tight truncate transition-opacity hover:opacity-80 ${
-                            isPastEv
-                              ? 'bg-ink-200 text-ink-700'
-                              : 'bg-brand-600 text-white'
-                          }`}
-                          title={`${ev.title} — ${ev.location}`}
-                        >
-                          <span className="font-medium truncate block">{ev.title}</span>
-                          <span className="opacity-75 truncate block">{ev.location}</span>
-                        </Link>
-                      )
-                    })}
-                  </div>
-                </div>
-              )
-            })}
+      <div className="grid grid-cols-7 gap-1">
+        {DOW.map((d) => (
+          <div key={d} className="cal-dow">
+            {d}
           </div>
         ))}
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-4 mt-3 text-xs text-ink-500">
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-brand-600 inline-block" /> Upcoming
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-ink-300 inline-block" /> Past
-        </span>
+      {/* keyed so React remounts the grid and the flip animation replays */}
+      <div key={turn} className="cal-grid is-turning">
+        {cells.map((day, i) => {
+          if (!day) return <div key={`b${i}`} className="cal-cell is-blank" />
+          const key = `${year}-${month}-${day}`
+          const dayEvents = byDay.get(key) || []
+          const isToday =
+            today.getFullYear() === year &&
+            today.getMonth() === month &&
+            today.getDate() === day
+
+          const cellInner = (
+            <>
+              <span className="cal-num">{day}</span>
+              {dayEvents.length > 0 && (
+                <span className="cal-dot">
+                  {dayEvents.slice(0, 4).map((ev) => (
+                    <i
+                      key={ev._id}
+                      className={new Date(ev.date) < today ? 'is-past' : undefined}
+                    />
+                  ))}
+                </span>
+              )}
+            </>
+          )
+
+          if (dayEvents.length === 0) {
+            return (
+              <div key={key} className={`cal-cell ${isToday ? 'is-today' : ''}`}>
+                {cellInner}
+              </div>
+            )
+          }
+
+          return (
+            <Link
+              key={key}
+              to={`/events/${dayEvents[0]._id}`}
+              title={dayEvents.map((e) => e.title).join(' · ')}
+              className={`cal-cell has-events ${isToday ? 'is-today' : ''}`}
+            >
+              {cellInner}
+            </Link>
+          )
+        })}
       </div>
+
+      {monthEvents.length === 0 ? (
+        <p className="cal-quiet">Nothing scheduled in {MONTHS[month]}.</p>
+      ) : (
+        <ul className="mt-6 border-t border-ink-950/[.14]">
+          {monthEvents.map((ev) => {
+            const p = parts(ev.date)
+            return (
+              <li key={ev._id} className="border-b border-ink-950/[.14]">
+                <Link
+                  to={`/events/${ev._id}`}
+                  className="flex flex-wrap items-center gap-x-4 gap-y-1 py-3.5 group"
+                >
+                  <span className="text-[.7rem] font-semibold uppercase tracking-[.16em] text-brand-600 w-16">
+                    {p.m} {p.d}
+                  </span>
+                  <span className="font-serif text-lg text-ink-900 group-hover:text-brand-700 transition-colors">
+                    {ev.title}
+                  </span>
+                  <span className="text-sm text-ink-500 ml-auto">{ev.location}</span>
+                  <ArrowRight size={15} className="text-brand-600 arw" />
+                </Link>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </div>
   )
 }
 
-const TABS = ['Upcoming', 'Past', 'Calendar']
+/* ── Notify band ─────────────────────────────────────────────────────────── */
+function Notify() {
+  const [email, setEmail] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [done, setDone] = useState(false)
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (!email.trim()) return
+    setLoading(true)
+    try {
+      await subscribeApi.subscribe(email.trim())
+      setDone(true)
+      setEmail('')
+      toast.success("You're on the list.")
+    } catch (err) {
+      toast.error(err.message || 'Could not subscribe. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <section id="notify" className="bg-ink-50 band scroll-mt-24">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+        <Reveal>
+          <p className="eyebrow">Never miss one</p>
+          <h2 className="section-heading mt-4 mb-0">Hear about events before they fill up</h2>
+          <p className="text-lg text-ink-600 leading-relaxed max-w-[44ch] mt-5">
+            Rooms are usually small. Subscribers get the date as soon as it&apos;s
+            confirmed, which is often a week before it goes on the site.
+          </p>
+        </Reveal>
+        <Reveal delay={1}>
+          {done ? (
+            <div className="border border-brand-600/30 bg-white/60 rounded-card px-6 py-7">
+              <p className="font-serif text-xl text-ink-900 mb-1.5">You&apos;re on the list.</p>
+              <p className="text-ink-600">We&apos;ll email you as soon as a date is set.</p>
+            </div>
+          ) : (
+            <>
+              <form onSubmit={submit} className="flex flex-wrap gap-3">
+                <input
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  aria-label="Email address"
+                  className="flex-1 min-w-[240px] bg-white/65 border border-ink-950/[.14] rounded-edge px-4 py-3.5 text-ink-900 placeholder:text-ink-400 focus:outline-none focus:border-brand-600 focus:bg-white transition-colors"
+                />
+                <button type="submit" disabled={loading} className="btn-primary disabled:opacity-50">
+                  {loading ? 'Adding…' : 'Notify me'}
+                  {!loading && <ArrowRight size={16} className="arw" />}
+                </button>
+              </form>
+              <p className="text-sm text-ink-500 mt-4">
+                Unsubscribe in one click. Your address is never shared.
+              </p>
+            </>
+          )}
+        </Reveal>
+      </div>
+    </section>
+  )
+}
 
 export default function Events() {
+  const loaded = useHeroLoad()
+
   const [upcoming, setUpcoming] = useState([])
   const [past, setPast] = useState([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState('Upcoming')
+  const [tab, setTab] = useState('upcoming')
 
   useEffect(() => {
     Promise.all([
       eventsApi.getUpcoming().catch(() => []),
       eventsApi.getPast().catch(() => []),
-    ]).then(([u, p]) => {
-      setUpcoming(u)
-      setPast(p)
-    }).finally(() => setLoading(false))
+    ])
+      .then(([u, p]) => {
+        setUpcoming(Array.isArray(u) ? u : [])
+        setPast(Array.isArray(p) ? p : [])
+      })
+      .finally(() => setLoading(false))
   }, [])
 
+  const all = useMemo(() => [...upcoming, ...past], [upcoming, past])
+
+  const TABS = [
+    { id: 'upcoming', label: 'Upcoming', n: upcoming.length },
+    { id: 'past', label: 'Past', n: past.length },
+    { id: 'calendar', label: 'Calendar', n: null },
+  ]
+
   return (
-    <div className="py-12 md:py-20">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6">
-
-        {/* Header */}
-        <header className="text-center mb-10">
-          <h1 className="section-heading">Events</h1>
-          <p className="text-ink-600 max-w-2xl mx-auto">
-            Join Bruno at readings, talks, and speaking engagements around the world.
+    <div className={loaded ? 'loaded' : undefined}>
+      {/* ── HERO ───────────────────────────────────────────────────────── */}
+      <section className="on-dark relative bg-ink-950 text-ink-100 overflow-hidden pt-32 pb-10 md:pt-44 md:pb-12">
+        <div
+          aria-hidden="true"
+          className="absolute pointer-events-none"
+          style={{
+            right: '-14%',
+            top: '-30%',
+            width: '58vw',
+            height: '58vw',
+            borderRadius: '50%',
+            background: 'radial-gradient(circle, rgba(31,70,60,.5) 0%, transparent 62%)',
+          }}
+        />
+        <div className="relative z-10 max-w-6xl mx-auto px-4 sm:px-6">
+          <p className="eyebrow hero-fade">Events</p>
+          <h1 className="font-serif text-4xl md:text-6xl lg:text-7xl font-semibold leading-[1.02] tracking-tight max-w-[15ch] mt-5">
+            <ClipWords text="Come and hear it" />
+            <ClipWords text="in person" offset={4} accent />
+          </h1>
+          <p className="hero-fade text-lg text-ink-100/70 leading-relaxed max-w-[54ch] mt-7" data-d="2">
+            Readings, talks, and conversations — at churches, libraries, universities,
+            and online. Copies of the book are available at every in-person event, and
+            Bruno usually stays afterwards to sign them.
           </p>
-        </header>
-
-        {/* Tabs */}
-        <div className="flex gap-1 bg-ink-100 p-1 rounded-xl mb-8 w-fit mx-auto">
-          {TABS.map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              className={`px-5 py-2 rounded-lg text-sm font-medium transition-colors ${
-                activeTab === tab
-                  ? 'bg-white text-ink-900 shadow-sm'
-                  : 'text-ink-500 hover:text-ink-700'
-              }`}
-            >
-              {tab}
-              {tab === 'Upcoming' && !loading && upcoming.length > 0 && (
-                <span className="ml-1.5 bg-brand-600 text-white text-xs px-1.5 py-0.5 rounded-full">{upcoming.length}</span>
-              )}
-            </button>
-          ))}
         </div>
+      </section>
 
-        {loading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-32 bg-ink-100 rounded-2xl animate-pulse" />
+      {/* ── TABS ───────────────────────────────────────────────────────── */}
+      <section className="on-dark bg-ink-950 pb-8 md:pb-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <div
+            role="tablist"
+            aria-label="Filter events"
+            className="flex flex-wrap gap-2 items-center border-t border-ink-100/15 pt-6"
+          >
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                onClick={() => setTab(t.id)}
+                className="pill"
+              >
+                {t.label}
+                {t.n !== null && <span className="opacity-60 ml-1.5 text-[.78rem]">{t.n}</span>}
+              </button>
             ))}
           </div>
-        ) : (
-          <>
-            {/* Upcoming tab */}
-            {activeTab === 'Upcoming' && (
-              upcoming.length === 0 ? (
-                <div className="text-center py-14 bg-ink-50 rounded-2xl border border-dashed border-ink-200">
-                  <div className="w-12 h-12 bg-ink-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <svg className="w-6 h-6 text-ink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <p className="text-ink-600 font-medium">No upcoming events right now</p>
-                  <p className="text-ink-400 text-sm mt-1">Check back soon or invite Bruno to speak at your event.</p>
-                </div>
-              ) : (
-                <ul className="space-y-4">
-                  {upcoming.map((ev) => <li key={ev._id}><UpcomingCard event={ev} /></li>)}
-                </ul>
-              )
-            )}
-
-            {/* Past tab */}
-            {activeTab === 'Past' && (
-              past.length === 0 ? (
-                <div className="text-center py-14 bg-ink-50 rounded-2xl border border-dashed border-ink-200">
-                  <p className="text-ink-600 font-medium">No past events yet</p>
-                </div>
-              ) : (
-                <div className="grid sm:grid-cols-2 gap-6">
-                  {past.map((ev) => <PastCard key={ev._id} event={ev} />)}
-                </div>
-              )
-            )}
-
-            {/* Calendar tab */}
-            {activeTab === 'Calendar' && (
-              <div className="bg-white rounded-2xl border border-ink-100 p-6">
-                <MonthCalendar upcoming={upcoming} past={past} />
-              </div>
-            )}
-          </>
-        )}
-
-        {/* CTA */}
-        <div className="mt-16 bg-gradient-to-r from-ink-900 to-ink-800 rounded-2xl px-6 py-10 text-center text-white">
-          <h3 className="font-serif text-2xl mb-2">Want Bruno to speak at your event?</h3>
-          <p className="text-ink-300 text-sm mb-6 max-w-md mx-auto">
-            Bruno speaks at churches, conferences, universities, and community events on topics of forgiveness, healing, and hope.
-          </p>
-          <Link
-            to="/contact"
-            className="inline-flex items-center gap-2 bg-brand-600 hover:bg-brand-500 text-white font-medium px-6 py-3 rounded-lg transition-colors"
-          >
-            Get in Touch
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-            </svg>
-          </Link>
         </div>
+      </section>
 
-      </div>
+      {/* ── LIST ───────────────────────────────────────────────────────── */}
+      <section className="bg-ink-100 band">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          {loading ? (
+            <div className="space-y-8">
+              {[0, 1].map((i) => (
+                <div key={i} className="flex gap-8 items-center">
+                  <div className="w-[100px] h-[92px] bg-ink-200/60 rounded-card animate-pulse shrink-0" />
+                  <div className="flex-1 space-y-3">
+                    <div className="h-4 w-24 bg-ink-200/50 rounded animate-pulse" />
+                    <div className="h-7 w-2/3 bg-ink-200/60 rounded animate-pulse" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : tab === 'calendar' ? (
+            <MonthCalendar events={all} />
+          ) : tab === 'upcoming' ? (
+            upcoming.length > 0 ? (
+              <div className="ev-rows">
+                {upcoming.map((ev, i) => (
+                  <EventRow key={ev._id} event={ev} delay={i < 3 ? i : undefined} />
+                ))}
+              </div>
+            ) : (
+              <div className="ev-empty">
+                <div className="w-11 h-11 mx-auto mb-6 rounded-full border border-ink-950/[.14] grid place-items-center">
+                  <CalendarDays size={18} className="text-brand-600" />
+                </div>
+                <h3 className="font-serif text-2xl md:text-3xl font-semibold text-ink-950 mb-3">
+                  Nothing scheduled just now
+                </h3>
+                <p className="text-lg text-ink-600 leading-relaxed max-w-[46ch] mx-auto mb-8">
+                  Bruno is between engagements. Leave your email and you&apos;ll hear the
+                  moment a date is set — or invite him to speak at your own event.
+                </p>
+                <div className="flex flex-wrap gap-3 justify-center">
+                  <a href="#notify" className="btn-primary">
+                    Notify me <ArrowRight size={16} className="arw" />
+                  </a>
+                  <a href="#booking" className="btn-secondary">
+                    Invite Bruno to speak
+                  </a>
+                </div>
+              </div>
+            )
+          ) : past.length > 0 ? (
+            <div className="ev-rows is-past">
+              {past.map((ev, i) => (
+                <EventRow key={ev._id} event={ev} past delay={i < 3 ? i : undefined} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-center text-ink-500">No past events on record yet.</p>
+          )}
+        </div>
+      </section>
+
+      <Notify />
+
+      {/* ── BOOKING ────────────────────────────────────────────────────── */}
+      <section id="booking" className="on-dark bg-ink-950 text-ink-50 band scroll-mt-24 stage">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-2 gap-10 lg:gap-16">
+          <Reveal>
+            <p className="eyebrow">Invitations</p>
+            <h2 className="font-serif text-3xl md:text-5xl font-semibold leading-tight mt-4">
+              Want Bruno at
+              <br />
+              your event?
+            </h2>
+            <p className="text-lg text-ink-50/70 leading-relaxed max-w-[46ch] mt-5 mb-8">
+              He speaks at churches, conferences, universities, and community
+              gatherings — in Rwanda and beyond. Tell him the date, the room, and
+              who&apos;ll be in it.
+            </p>
+            <Link to="/contact" className="btn-accent">
+              Check availability <ArrowRight size={16} className="arw" />
+            </Link>
+          </Reveal>
+
+          <Reveal delay={1}>
+            <p className="text-[.72rem] uppercase tracking-[.2em] text-ink-50/45 mb-5">
+              What he can do
+            </p>
+            <div className="grid gap-3">
+              {FORMATS.map((f) => (
+                <div
+                  key={f.name}
+                  className="bk-lift border border-ink-100/15 rounded-card p-5 hover:border-brand-300/40"
+                >
+                  <h3 className="font-serif text-xl font-semibold text-ink-50 mb-1.5">{f.name}</h3>
+                  <p className="text-ink-50/65 leading-relaxed">{f.body}</p>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
     </div>
   )
 }
