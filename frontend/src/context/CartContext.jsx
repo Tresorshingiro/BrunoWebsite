@@ -46,6 +46,16 @@ function cartReducer(state, action) {
     }
     case 'CLEAR':
       return { items: [] }
+    case 'REFRESH': {
+      // Re-seat each line on the current catalogue record. Books that no longer
+      // exist are dropped — they cannot be ordered.
+      const byId = action.payload
+      return {
+        items: state.items
+          .filter((i) => byId[i.book._id])
+          .map((i) => ({ ...i, book: { ...i.book, ...byId[i.book._id] } })),
+      }
+    }
     default:
       return state
   }
@@ -76,6 +86,11 @@ export function CartProvider({ children }) {
     dispatch({ type: 'CLEAR' })
   }, [])
 
+  const refreshPrices = useCallback(async (books) => {
+    const byId = Object.fromEntries(books.map((b) => [b._id, b]))
+    dispatch({ type: 'REFRESH', payload: byId })
+  }, [])
+
   const totalItems = state.items.reduce((s, i) => s + i.quantity, 0)
   const totalAmount = state.items.reduce((s, i) => {
     const price = i.format === 'digital' ? (i.book.digitalPrice ?? i.book.price) : i.book.price
@@ -92,6 +107,7 @@ export function CartProvider({ children }) {
         removeItem,
         setQuantity,
         clearCart,
+        refreshPrices,
       }}
     >
       {children}

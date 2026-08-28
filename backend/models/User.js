@@ -7,11 +7,10 @@ const userSchema = new mongoose.Schema({
     passwordHash: { type: String, required: true },
     phone: { type: String, trim: true },
     address: {
-        street: { type: String },
-        city: { type: String },
-        state: { type: String },
-        country: { type: String },
-        zipCode: { type: String },
+        province: { type: String, trim: true },
+        district: { type: String, trim: true },
+        sector: { type: String, trim: true },
+        street: { type: String, trim: true },
     },
 }, { timestamps: true })
 

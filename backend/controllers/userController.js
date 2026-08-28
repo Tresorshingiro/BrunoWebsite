@@ -115,4 +115,27 @@ const getUserOrders = async (req, res) => {
     }
 }
 
-module.exports = { register, login, getMe, updateProfile, getUserOrders }
+// GET /api/users/orders/:id (protected) — one order, scoped to its owner
+const getUserOrder = async (req, res) => {
+    try {
+        const mongoose = require('mongoose')
+        // Validate ObjectId format before querying
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ message: 'Invalid order ID' })
+        }
+
+        const Order = require('../models/Order')
+        // userId is part of the query, not a check afterwards: another user's
+        // order is indistinguishable from one that does not exist.
+        const order = await Order.findOne({
+            _id: req.params.id,
+            userId: req.user.id,
+        }).lean()
+        if (!order) return res.status(404).json({ message: 'Order not found' })
+        res.json(order)
+    } catch (err) {
+        res.status(500).json({ message: err.message })
+    }
+}
+
+module.exports = { register, login, getMe, updateProfile, getUserOrders, getUserOrder }

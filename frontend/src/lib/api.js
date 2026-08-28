@@ -113,8 +113,16 @@ export const subscribeApi = {
   unsubscribe: (token) => api.get(`/api/subscriptions/unsubscribe?token=${token}`),
 }
 export const paymentApi = {
-  createIntent: (data) => api.post('/api/payment/create-intent', data),
-  confirmOrder: (data) => api.post('/api/payment/confirm-order', data),
+  initiate: (data) => api.post('/api/payment/initiate', data),
+  verify: (data) => api.post('/api/payment/verify', data),
+}
+export const ordersApi = {
+  getAll: () => api.get('/api/users/orders'),
+  getById: (id) => api.get(`/api/users/orders/${id}`),
+}
+export const profileApi = {
+  get: () => api.get('/api/users/me'),
+  update: (data) => api.put('/api/users/profile', data),
 }
 export const blogInteractionApi = {
   toggleLike: (id) => api.post(`/api/blog/${id}/like`),

@@ -1,126 +1,147 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { api } from '../lib/api'
+import toast from 'react-hot-toast'
+import { ordersApi, booksApi } from '../lib/api'
 import { useUser } from '../context/UserContext'
+import { useCart } from '../context/CartContext'
+import { formatRWF, formatAddress, formatDate, isInProgress, orderRef } from '../lib/orders'
+import { cldResize } from '../lib/images'
+import StatusPill from '../components/order/StatusPill'
+import AccountNav from '../components/order/AccountNav'
+
+const FILTERS = [
+  ['all', 'All', () => true],
+  ['progress', 'In progress', isInProgress],
+  ['done', 'Delivered', (o) => o.status === 'delivered'],
+]
 
 export default function Orders() {
+  const { user } = useUser()
+  const { addItem } = useCart()
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
-  const { user } = useUser()
+  const [filter, setFilter] = useState('all')
 
   useEffect(() => {
-    if (user) {
-      api.get('/api/users/orders')
-        .then(setOrders)
-        .catch(() => setOrders([]))
-        .finally(() => setLoading(false))
-    }
+    if (!user) return
+    ordersApi.getAll().then(setOrders).catch(() => setOrders([])).finally(() => setLoading(false))
   }, [user])
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'paid': return 'bg-green-100 text-green-800'
-      case 'processing': return 'bg-blue-100 text-blue-800'
-      case 'shipped': return 'bg-purple-100 text-purple-800'
-      case 'delivered': return 'bg-green-100 text-green-800'
-      case 'cancelled': return 'bg-red-100 text-red-800'
-      default: return 'bg-ink-100 text-ink-800'
-    }
-  }
+  const shown = useMemo(() => {
+    const test = FILTERS.find((f) => f[0] === filter)[2]
+    return orders.filter(test)
+  }, [orders, filter])
 
-  if (loading) {
-    return (
-      <div className="py-16 md:py-24">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6">
-          <p className="text-ink-500">Loading your orders...</p>
-        </div>
-      </div>
-    )
+  /* Re-resolve against the live catalogue rather than replaying the stored
+     snapshot — a book may have been deleted, gone out of stock, or changed
+     price since. The snapshot stays correct as a record of what was bought. */
+  const orderAgain = async (order) => {
+    try {
+      const all = await booksApi.getAll()
+      const byId = Object.fromEntries(all.map((b) => [b._id, b]))
+      const missing = []
+      let added = 0
+      for (const item of order.items) {
+        const book = byId[String(item.bookId)]
+        if (book && book.inStock && book.price > 0) { addItem(book, item.quantity, 'physical'); added++ }
+        else missing.push(item.title)
+      }
+      if (missing.length) toast(`No longer available: ${missing.join(', ')}`)
+      if (added === 0) toast.error('None of these are available right now.')
+      else toast.success('Added to your cart')
+    } catch {
+      toast.error('Could not reach the catalogue')
+    }
   }
 
   return (
-    <div className="py-12 md:py-20">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6">
-        <h1 className="section-heading mb-8">My Orders</h1>
+    <>
+      <header className="bg-ink-950 text-ink-50 band pt-28 md:pt-32 pb-0">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          <h1 className="font-serif text-3xl md:text-5xl">My orders</h1>
+          <p className="text-ink-100/65 mt-3">
+            {loading ? 'Loading…'
+              : orders.length === 0 ? 'No orders yet.'
+              : `${orders.length} ${orders.length === 1 ? 'order' : 'orders'}, all time.`}
+          </p>
+          <AccountNav current="orders" />
+        </div>
+      </header>
 
-        {orders.length === 0 ? (
-          <div className="text-center py-16">
-            <svg className="w-16 h-16 mx-auto text-ink-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-            </svg>
-            <p className="text-ink-600 text-lg mb-6">You haven't placed any orders yet.</p>
-            <Link to="/books" className="btn-primary">
-              Browse Books
-            </Link>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {orders.map((order) => (
-              <div key={order._id} className="bg-white rounded-xl border border-ink-200 overflow-hidden">
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <p className="text-sm text-ink-600">
-                        Order #{order._id.slice(-8).toUpperCase()}
-                      </p>
-                      <p className="text-xs text-ink-500 mt-1">
-                        {new Date(order.createdAt).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })}
-                      </p>
-                    </div>
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </span>
-                  </div>
+      <main className="bg-ink-100 band">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6">
+          {orders.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-7" role="group" aria-label="Filter orders">
+              {FILTERS.map(([key, label]) => (
+                <button key={key} type="button" className="filter-pill"
+                        aria-pressed={filter === key} onClick={() => setFilter(key)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
 
-                  <div className="space-y-3 mb-4">
-                    {order.items.map((item, idx) => (
-                      <div key={idx} className="flex gap-4">
-                        {item.coverImage && (
-                          <img
-                            src={item.coverImage}
-                            alt={item.title}
-                            className="w-16 h-20 object-cover rounded"
-                          />
-                        )}
-                        <div className="flex-1">
-                          <h3 className="font-serif text-base text-ink-900">{item.title}</h3>
-                          <p className="text-sm text-ink-600 mt-1">
-                            Quantity: {item.quantity} × {item.price.toLocaleString()} RWF
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+          {!loading && orders.length === 0 && (
+            <div className="text-center py-12">
+              <h2 className="font-serif text-2xl text-ink-900 mb-3">No orders yet</h2>
+              <p className="text-ink-600 max-w-[40ch] mx-auto mb-7">
+                When you order a book it will appear here, with tracking and receipts.
+              </p>
+              <Link to="/books" className="btn-primary">Browse the books <span className="arw">→</span></Link>
+            </div>
+          )}
 
-                  <div className="pt-4 border-t border-ink-100 flex justify-between items-center">
-                    <span className="text-sm font-medium text-ink-700">Total</span>
-                    <span className="text-lg font-semibold text-ink-900">
-                      {order.totalAmount.toLocaleString()} RWF
-                    </span>
-                  </div>
+          {/* A filter that matches nothing must say so, or it reads as a page
+              that failed to load. */}
+          {!loading && orders.length > 0 && shown.length === 0 && (
+            <p className="text-ink-600 py-8">No orders in this view.</p>
+          )}
 
-                  {order.shippingAddress && (
-                    <div className="mt-4 pt-4 border-t border-ink-100">
-                      <p className="text-xs font-medium text-ink-700 mb-1">Shipping Address</p>
-                      <p className="text-sm text-ink-600">
-                        {order.shippingAddress.street && `${order.shippingAddress.street}, `}
-                        {order.shippingAddress.city && `${order.shippingAddress.city}, `}
-                        {order.shippingAddress.state && `${order.shippingAddress.state} `}
-                        {order.shippingAddress.zipCode}
-                        {order.shippingAddress.country && `, ${order.shippingAddress.country}`}
-                      </p>
-                    </div>
-                  )}
-                </div>
+          {shown.map((order) => (
+            <article key={order._id} className="bg-ink-50 border border-ink-950/[.14] rounded-card mb-4 overflow-hidden">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 sm:px-6 py-4 border-b border-ink-950/[.14] bg-white/40">
+                <span className="font-semibold text-[.95rem] tracking-[.03em]">{orderRef(order)}</span>
+                <span className="text-[.85rem] text-ink-500">{formatDate(order.createdAt)}</span>
+                <span className="ml-auto"><StatusPill status={order.status} /></span>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+
+              <div className="px-4 sm:px-6 py-4">
+                {order.items.map((item, i) => (
+                  <div key={i} className="grid grid-cols-[46px_minmax(0,1fr)_auto] gap-3.5 items-center py-2">
+                    {item.coverImage
+                      ? <img src={cldResize(item.coverImage, 92)} alt="" className="aspect-[2/3] w-full object-cover rounded-edge" />
+                      : <div className="aspect-[2/3] w-full rounded-edge bg-brand-900" />}
+                    <div className="min-w-0">
+                      <div className="text-[.95rem] font-semibold truncate">{item.title}</div>
+                      <div className="text-[.82rem] text-ink-500">Paperback · qty {item.quantity}</div>
+                    </div>
+                    <div className="text-[.9rem] font-semibold whitespace-nowrap">
+                      {formatRWF(item.price * item.quantity)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 sm:px-6 py-4 border-t border-ink-950/[.14]">
+                <span className="text-[.9rem]">
+                  Total <b className="font-serif text-xl ml-1.5">{formatRWF(order.totalAmount)}</b>
+                </span>
+                <span className="text-[.85rem] text-ink-500">
+                  {order.deliveryMethod === 'collect'
+                    ? 'Collection in person'
+                    : formatAddress(order.shippingAddress) || 'Delivery'}
+                </span>
+                <span className="ml-auto flex flex-wrap gap-2">
+                  {order.status === 'delivered'
+                    ? <button type="button" onClick={() => orderAgain(order)} className="btn-primary">Order again</button>
+                    : <Link to={`/orders/${order._id}`} className="btn-primary">Track order <span className="arw">→</span></Link>}
+                  <Link to={`/orders/${order._id}`} className="btn-secondary">View details</Link>
+                </span>
+              </div>
+            </article>
+          ))}
+        </div>
+      </main>
+    </>
   )
 }

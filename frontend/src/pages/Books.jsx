@@ -18,17 +18,16 @@ import { byBruno, metaFor, pluralTitles } from '../lib/books'
    once and the detail page links back to them.
    ───────────────────────────────────────────────────────────────────────── */
 
-/* Card-only while checkout runs on Stripe. When the Flutterwave migration
-   lands, add 'MTN MoMo' and 'Airtel Money' here — this array is the only
-   thing that needs to change. Until then the page must not claim payment
-   methods the checkout cannot actually take. */
-const PAY_METHODS = ['Visa', 'Mastercard', 'Bank transfer']
+/* The page must not claim payment methods the checkout cannot actually take.
+   Flutterwave supports only `card` and `mobilemoneyrwanda` for RWF — bank
+   transfer is Nigeria-only — so these four are exactly what Checkout offers. */
+const PAY_METHODS = ['MTN MoMo', 'Airtel Money', 'Visa', 'Mastercard']
 
 const ORDERING = [
   {
     title: 'Payment',
     paras: [
-      'Card and bank transfer. Checkout is handled by a licensed provider — card details never touch this site.',
+      'Mobile money or card. Checkout is handled by a licensed provider — your payment details never touch this site.',
     ],
     chips: PAY_METHODS,
   },

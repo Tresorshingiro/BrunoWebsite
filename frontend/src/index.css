@@ -124,21 +124,6 @@
 
   /* Fluid section padding */
   .band { padding-block: var(--band); }
-
-  /* Stripe Elements — single definition. Previously declared twice, with a
-     dark variant outside @layer components overriding the light one. */
-  .StripeElement {
-    background: #ffffff;
-    border: 1px solid #D5D2C9;
-    border-radius: 2px;
-    padding: 14px 16px;
-    color: #343732;
-  }
-  .StripeElement--focus {
-    border-color: #3A7566;
-    box-shadow: 0 0 0 1px #3A7566;
-  }
-  .StripeElement--invalid { border-color: #ef4444; }
 }
 
 @layer utilities {
@@ -480,6 +465,94 @@
 .detail a { color: #2F6154; font-weight: 600; }
 .detail a:hover { text-decoration: underline; }
 .detail .small { font-size: .85rem; color: rgba(18, 22, 21, .5); margin-top: .3rem; }
+
+/* ── COMMERCE ─────────────────────────────────────────────────────────────
+   Cart, checkout and order pages. Reuses .fld / .fld-pair / .detail from the
+   contact page rather than introducing a second form system. */
+
+.summary-card {
+  background: theme('colors.ink.50');
+  border: 1px solid rgba(18, 22, 21, .14);
+  border-radius: theme('borderRadius.card');
+  padding: 1.5rem;
+}
+@media (min-width: 860px) {
+  .summary-card { position: sticky; top: 5.5rem; }
+}
+
+/* Status pill — colour maps to meaning, not to status name. */
+.status {
+  display: inline-flex; align-items: center; gap: .45rem;
+  font-size: .7rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  padding: .35rem .75rem; border-radius: 100px;
+}
+.status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.status-neutral { background: rgba(18, 22, 21, .08); color: theme('colors.ink.600'); }
+.status-amber   { background: rgba(183, 121, 31, .14); color: #7A4E0F; }
+.status-sky     { background: rgba(47, 102, 144, .14); color: theme('colors.sky.700'); }
+.status-moss    { background: rgba(78, 150, 131, .16); color: theme('colors.brand.700'); }
+.status-rose    { background: rgba(163, 58, 58, .13); color: #8F3030; }
+
+/* Checkout step indicator */
+.steps { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+.step  { display: flex; align-items: center; gap: .55rem; font-size: .85rem; color: rgba(234, 232, 225, .55); }
+.step b {
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  font-size: .72rem; font-weight: 700; border: 1px solid rgba(234, 232, 225, .28);
+}
+.step-on  { color: theme('colors.ink.50'); }
+.step-on b { background: theme('colors.brand.300'); border-color: theme('colors.brand.300'); color: theme('colors.brand.900'); }
+/* A completed step should read as done, not as dim as one still to come. */
+.step-done { color: rgba(234, 232, 225, .72); }
+.step-done b { background: rgba(156, 211, 196, .2); border-color: transparent; color: theme('colors.brand.300'); }
+.step-sep { width: 22px; height: 1px; background: rgba(234, 232, 225, .2); }
+
+/* Quantity stepper */
+.qty { display: inline-flex; align-items: center; border: 1px solid rgba(18, 22, 21, .14);
+       border-radius: theme('borderRadius.edge'); background: rgba(255, 255, 255, .6); }
+.qty button { width: 38px; height: 40px; border: 0; background: transparent; cursor: pointer;
+              font-size: 1.05rem; color: theme('colors.ink.950'); }
+.qty button:hover:not(:disabled) { background: rgba(18, 22, 21, .06); }
+.qty button:disabled { opacity: .3; cursor: not-allowed; }
+.qty span { min-width: 34px; text-align: center; font-weight: 600; font-size: .92rem; }
+
+/* Filter pills — light-ground sibling of the dark-ground .pill used by Blog
+   and Events. Distinct name because both are bare single-class selectors, and
+   .pill is defined later in this file, so it would win on source order. */
+.filter-pill { font-size: .83rem; font-weight: 500; padding: .45rem 1rem; border-radius: 100px;
+        border: 1px solid rgba(18, 22, 21, .14); background: transparent;
+        color: theme('colors.ink.600'); cursor: pointer;
+        transition: all .2s var(--ease); }
+.filter-pill:hover { border-color: theme('colors.brand.600'); color: theme('colors.brand.600'); }
+.filter-pill[aria-pressed="true"] { background: theme('colors.brand.900'); border-color: theme('colors.brand.900');
+                             color: theme('colors.ink.50'); }
+
+/* Payment method tile */
+.pay-tile { border: 1px solid rgba(18, 22, 21, .14); border-radius: theme('borderRadius.edge');
+            background: #fff; cursor: pointer; padding: .9rem 1rem; text-align: left;
+            transition: border-color .2s var(--ease), background .2s var(--ease); }
+.pay-tile:hover { border-color: theme('colors.brand.600'); }
+.pay-tile[aria-pressed="true"] { border-color: theme('colors.brand.900'); background: rgba(78, 150, 131, .07); }
+
+/* Timeline */
+.tstep { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 1rem;
+         padding-bottom: 1.4rem; position: relative; }
+.tstep:last-child { padding-bottom: 0; }
+.tstep::before { content: ""; position: absolute; left: 10px; top: 20px; bottom: 0;
+                 width: 1px; background: rgba(18, 22, 21, .14); }
+.tstep:last-child::before { display: none; }
+.tdot { width: 21px; height: 21px; border-radius: 50%; border: 1px solid rgba(18, 22, 21, .14);
+        background: theme('colors.ink.50'); display: grid; place-items: center; z-index: 1; }
+.tstep-done .tdot { background: theme('colors.brand.900'); border-color: theme('colors.brand.900'); }
+.js .tstep-done .tdot { animation: fillDot .4s var(--ease) both; }
+.js .tstep-done:nth-child(2) .tdot { animation-delay: .1s; }
+.js .tstep-done:nth-child(3) .tdot { animation-delay: .2s; }
+.js .tstep-done:nth-child(4) .tdot { animation-delay: .3s; }
+@keyframes fillDot { from { transform: scale(.6); opacity: 0 } to { transform: none; opacity: 1 } }
+
+/* Success tick */
+.tick { animation: pop .5s var(--ease) both; }
+@keyframes pop { from { transform: scale(.7); opacity: 0 } to { transform: none; opacity: 1 } }
 
 /* ============================================================
    LOGIN — split shell

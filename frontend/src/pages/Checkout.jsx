@@ -1,290 +1,418 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { loadStripe } from '@stripe/stripe-js'
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js'
-import { useCart } from '../context/CartContext'
-import { paymentApi } from '../lib/api'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3'
 import toast from 'react-hot-toast'
+import { useCart } from '../context/CartContext'
+import { useUser } from '../context/UserContext'
+import { paymentApi } from '../lib/api'
+import { PROVINCES, districtsFor } from '../lib/rwanda'
+import { formatRWF, DELIVERY_FEE } from '../lib/orders'
+import { cldResize } from '../lib/images'
 
-const stripePublishableKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY
-const stripePromise =
-  stripePublishableKey && typeof stripePublishableKey === 'string' && stripePublishableKey.startsWith('pk_')
-    ? loadStripe(stripePublishableKey)
-    : null
+/* MTN and Airtel both map to `mobilemoneyrwanda` — Flutterwave's Rwanda form
+   detects the network from the number prefix, so the two tiles are a
+   recognition affordance rather than two code paths.
 
-function CheckoutForm({ clientSecret, paymentIntentId, orderItems, total, customerName, customerEmail, shippingAddress, onSuccess }) {
-  const stripe = useStripe()
-  const elements = useElements()
-  const [processing, setProcessing] = useState(false)
+   The mockup's fourth tile, bank transfer, is not offered: Flutterwave lists
+   only `card` and `mobilemoneyrwanda` for RWF, and the option string the plan
+   carried (`banktransfer`) is not valid in any currency — it is `bank transfer`
+   with a space, and NGN only. A tile that opens a modal with nothing in it is
+   worse than one tile fewer. */
+const PAY_TILES = [
+  { id: 'momo', name: 'MTN Mobile Money', sub: 'Pay from your MoMo balance', opt: 'mobilemoneyrwanda' },
+  { id: 'airtel', name: 'Airtel Money', sub: 'Pay from your Airtel wallet', opt: 'mobilemoneyrwanda' },
+  { id: 'card', name: 'Card', sub: 'Visa or Mastercard', opt: 'card' },
+]
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!stripe || !elements) return
-    setProcessing(true)
-    try {
-      const { error } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/order-success`,
-          receipt_email: customerEmail,
-          payment_method_data: {
-            billing_details: {
-              name: customerName,
-              email: customerEmail,
-              address: shippingAddress?.street ? {
-                line1: shippingAddress.street,
-                city: shippingAddress.city,
-                state: shippingAddress.state,
-                country: shippingAddress.country,
-                postal_code: shippingAddress.zipCode,
-              } : undefined,
-            },
-          },
-        },
-      })
-      if (error) {
-        toast.error(error.message || 'Payment failed')
-        setProcessing(false)
-        return
-      }
-      // Store for order-success page (in case redirect doesn't include query params in some flows)
-      sessionStorage.setItem('pendingOrder', JSON.stringify({
-        paymentIntentId,
-        customerName,
-        customerEmail,
-        items: orderItems,
-        shippingAddress: shippingAddress || {},
-        total,
-      }))
-      onSuccess()
-    } catch (err) {
-      toast.error(err.message || 'Something went wrong')
-    } finally {
-      setProcessing(false)
-    }
-  }
-
-  return (
-    <form onSubmit={handleSubmit} className="mt-6">
-      <PaymentElement />
-      <button
-        type="submit"
-        disabled={!stripe || processing}
-        className="btn-primary w-full mt-6 disabled:opacity-50"
-      >
-        {processing ? 'Processing...' : `Pay ${total.toLocaleString()} RWF`}
-      </button>
-    </form>
-  )
-}
+const DELIVERY_OPTIONS = [
+  ['standard', 'Standard delivery', formatRWF(DELIVERY_FEE), 'Flat rate anywhere in Rwanda, 2–3 working days in Kigali.'],
+  ['collect', 'Collect in person', 'Free', 'Pick up at a Vital Readings event, or arrange a time.'],
+]
 
 export default function Checkout() {
   const navigate = useNavigate()
-  const { items, totalAmount, clearCart } = useCart()
-  const [step, setStep] = useState('form')
-  const [clientSecret, setClientSecret] = useState('')
-  const [paymentIntentId, setPaymentIntentId] = useState('')
-  const [orderItems, setOrderItems] = useState([])
-  const [form, setForm] = useState({
-    customerName: '',
-    customerEmail: '',
-    street: '',
-    city: '',
-    state: '',
-    country: '',
-    zipCode: '',
-  })
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const { items, totalAmount } = useCart()
+  const { user, updateProfile } = useUser()
 
-  if (items.length === 0 && !clientSecret) {
-    return (
-      <div className="py-16 text-center">
-        <p className="text-ink-600 mb-4">Your cart is empty.</p>
-        <button type="button" onClick={() => navigate('/books')} className="btn-primary">
-          Browse Books
-        </button>
-      </div>
-    )
+  const [step, setStep] = useState(1)
+  const [method, setMethod] = useState('momo')
+  const [saveProfile, setSaveProfile] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [session, setSession] = useState(null)   // { orderId, txRef, amount, publicKey, customer }
+
+  const [form, setForm] = useState({
+    customerName: '', customerEmail: '', customerPhone: '',
+    deliveryMethod: 'standard',
+    province: 'Kigali City', district: 'Gasabo', sector: '', street: '',
+    notes: '', signed: false,
+  })
+
+  // Pre-fill from the saved profile — the payoff for having one.
+  useEffect(() => {
+    if (!user) return
+    setForm((f) => ({
+      ...f,
+      customerName: f.customerName || user.name || '',
+      customerEmail: f.customerEmail || user.email || '',
+      customerPhone: f.customerPhone || user.phone || '',
+      province: user.address?.province || f.province,
+      district: user.address?.district || f.district,
+      sector: user.address?.sector || f.sector,
+      street: user.address?.street || f.street,
+    }))
+  }, [user])
+
+  const set = (k) => (e) => {
+    const v = e.target.type === 'checkbox' ? e.target.checked : e.target.value
+    setForm((f) => (k === 'province'
+      // Changing province invalidates the district below it.
+      ? { ...f, province: v, district: districtsFor(v)[0] || '' }
+      : { ...f, [k]: v }))
   }
 
-  const handleContinueToPayment = async (e) => {
+  const collecting = form.deliveryMethod === 'collect'
+  const deliveryFee = collecting ? 0 : DELIVERY_FEE
+  const total = totalAmount + deliveryFee
+
+  /* Once the server has priced the order, the summary shows *its* figures. The
+     cart's numbers can be stale — the server re-prices from the catalogue — and
+     a page that quotes one total beside a button charging another is the exact
+     confusion the pre-payment order write exists to prevent. */
+  const view = session?.summary
+    ? {
+        lines: session.summary.items.map((i) => ({
+          key: `${i.bookId}-${i.format}`, title: i.title,
+          coverImage: i.coverImage, price: i.price, quantity: i.quantity,
+        })),
+        subtotal: session.summary.subtotal,
+        deliveryFee: session.summary.deliveryFee,
+        total: session.summary.total,
+      }
+    : {
+        lines: items.map(({ book, quantity, format }) => ({
+          key: `${book._id}-${format}`, title: book.title,
+          coverImage: book.coverImage, price: book.price || 0, quantity,
+        })),
+        subtotal: totalAmount,
+        deliveryFee,
+        total,
+      }
+
+  const continueToPayment = async (e) => {
     e.preventDefault()
-    if (!form.customerName?.trim() || !form.customerEmail?.trim()) {
-      toast.error('Please enter your name and email.')
+    if (!form.customerName.trim() || !form.customerEmail.trim() || !form.customerPhone.trim()) {
+      toast.error('Name, email and phone are required.')
       return
     }
+    if (!collecting && (!form.sector.trim() || !form.street.trim())) {
+      toast.error('Please give a sector and a street or landmark.')
+      return
+    }
+
     setLoading(true)
-    setError('')
     try {
-      const payload = {
-        items: items.map(({ book, quantity, format }) => ({
-          bookId: book._id,
-          quantity,
-          format: format || 'physical',
-        })),
+      const res = await paymentApi.initiate({
+        items: items.map(({ book, quantity }) => ({ bookId: book._id, quantity })),
         customerName: form.customerName.trim(),
         customerEmail: form.customerEmail.trim(),
+        customerPhone: form.customerPhone.trim(),
+        deliveryMethod: form.deliveryMethod,
+        shippingAddress: collecting ? {} : {
+          province: form.province, district: form.district,
+          sector: form.sector.trim(), street: form.street.trim(),
+        },
+        signed: form.signed,
+        notes: form.notes.trim(),
+      })
+      setSession(res)
+      setStep(2)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+
+      if (saveProfile && user) {
+        // Saving is a convenience; never block checkout. updateProfile also
+        // refreshes the context user, so /profile does not show stale details.
+        updateProfile({
+          name: form.customerName.trim(),
+          phone: form.customerPhone.trim(),
+          address: collecting ? undefined : {
+            province: form.province, district: form.district,
+            sector: form.sector.trim(), street: form.street.trim(),
+          },
+        }).catch(() => {})
       }
-      if (form.street || form.city || form.country) {
-        payload.shippingAddress = {
-          street: form.street || undefined,
-          city: form.city || undefined,
-          state: form.state || undefined,
-          country: form.country || undefined,
-          zipCode: form.zipCode || undefined,
-        }
-      }
-      const res = await paymentApi.createIntent(payload)
-      setClientSecret(res.clientSecret)
-      setPaymentIntentId(res.paymentIntentId)
-      setOrderItems(res.orderItems || [])
-      setStep('payment')
-      sessionStorage.setItem('pendingOrder', JSON.stringify({
-        paymentIntentId: res.paymentIntentId,
-        customerName: form.customerName.trim(),
-        customerEmail: form.customerEmail.trim(),
-        items: res.orderItems,
-        shippingAddress: payload.shippingAddress || {},
-        total: res.total,
-      }))
     } catch (err) {
-      setError(err.message || 'Failed to initialize payment')
-      toast.error(err.message)
+      toast.error(err.message || 'Could not start checkout')
     } finally {
       setLoading(false)
     }
   }
 
+  const tile = PAY_TILES.find((t) => t.id === method) || PAY_TILES[0]
+
+  // The server sends the key it initiated against; the env var is a fallback so
+  // a missing FLW_PUBLIC_KEY on the server fails loudly rather than silently.
+  const publicKey = session?.publicKey || import.meta.env.VITE_FLW_PUBLIC_KEY
+
+  const openPayment = useFlutterwave(session ? {
+    public_key: publicKey,
+    tx_ref: session.txRef,
+    amount: session.amount,
+    currency: 'RWF',            // whole numbers — never multiply by 100
+    payment_options: tile.opt,  // only the method the customer picked
+    customer: session.customer,
+    customizations: {
+      title: 'Bruno Iradukunda',
+      description: 'Book order',
+    },
+  } : {})
+
+  const pay = () => {
+    if (!session) return
+    if (!publicKey) {
+      toast.error('Payment is not configured. Please contact us and we will take the order by hand.')
+      return
+    }
+    openPayment({
+      callback: (response) => {
+        closePaymentModal()
+        // The server decides whether this actually paid — the redirect alone
+        // proves nothing. OrderSuccess calls verify.
+        navigate(`/order-success?tx_ref=${session.txRef}&transaction_id=${response.transaction_id}`)
+      },
+      onClose: () => {
+        // The order stays pending; they can pay again from /orders.
+        toast('Payment cancelled — your order is saved as unpaid.')
+      },
+    })
+  }
+
+  if (items.length === 0 && !session) {
+    return (
+      <div className="bg-ink-100 band pt-28 text-center">
+        <p className="text-ink-600 mb-5">Your cart is empty.</p>
+        <button type="button" onClick={() => navigate('/books')} className="btn-primary">
+          Browse books
+        </button>
+      </div>
+    )
+  }
+
   return (
-    <div className="py-12 md:py-20">
-      <div className="max-w-xl mx-auto px-4 sm:px-6">
-        <h1 className="section-heading mb-8">Checkout</h1>
+    <>
+      <header className="bg-ink-950 text-ink-50 band pt-28 md:pt-32">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+          <h1 className="font-serif text-3xl md:text-5xl">Checkout</h1>
+          <div className="steps mt-6">
+            <span className={`step ${step > 1 ? 'step-done' : 'step-on'}`}><b>1</b> Delivery details</span>
+            <span className="step-sep" />
+            <span className={`step ${step === 2 ? 'step-on' : ''}`}><b>2</b> Payment</span>
+            <span className="step-sep" />
+            <span className="step"><b>3</b> Confirmation</span>
+          </div>
+        </div>
+      </header>
 
-        {step === 'form' && (
-          <form onSubmit={handleContinueToPayment} className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-ink-700 mb-1">Name *</label>
-              <input
-                type="text"
-                required
-                value={form.customerName}
-                onChange={(e) => setForm((f) => ({ ...f, customerName: e.target.value }))}
-                className="w-full px-4 py-3 rounded-lg border border-ink-200 focus:ring-2 focus:ring-brand-500"
-                placeholder="Your full name"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-ink-700 mb-1">Email *</label>
-              <input
-                type="email"
-                required
-                value={form.customerEmail}
-                onChange={(e) => setForm((f) => ({ ...f, customerEmail: e.target.value }))}
-                className="w-full px-4 py-3 rounded-lg border border-ink-200 focus:ring-2 focus:ring-brand-500"
-                placeholder="you@example.com"
-              />
-            </div>
-            <div className="border-t border-ink-100 pt-4">
-              <p className="text-sm font-medium text-ink-700 mb-3">Shipping address (optional for digital)</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  value={form.street}
-                  onChange={(e) => setForm((f) => ({ ...f, street: e.target.value }))}
-                  className="sm:col-span-2 w-full px-4 py-2 rounded-lg border border-ink-200"
-                  placeholder="Street"
-                />
-                <input
-                  type="text"
-                  value={form.city}
-                  onChange={(e) => setForm((f) => ({ ...f, city: e.target.value }))}
-                  className="w-full px-4 py-2 rounded-lg border border-ink-200"
-                  placeholder="City"
-                />
-                <input
-                  type="text"
-                  value={form.state}
-                  onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
-                  className="w-full px-4 py-2 rounded-lg border border-ink-200"
-                  placeholder="State"
-                />
-                <input
-                  type="text"
-                  value={form.country}
-                  onChange={(e) => setForm((f) => ({ ...f, country: e.target.value }))}
-                  className="w-full px-4 py-2 rounded-lg border border-ink-200"
-                  placeholder="Country"
-                />
-                <input
-                  type="text"
-                  value={form.zipCode}
-                  onChange={(e) => setForm((f) => ({ ...f, zipCode: e.target.value }))}
-                  className="w-full px-4 py-2 rounded-lg border border-ink-200"
-                  placeholder="ZIP / Postal code"
-                />
-              </div>
-            </div>
-            {error && <p className="text-red-600 text-sm">{error}</p>}
-            <div className="flex justify-between items-center">
-              <button type="button" onClick={() => navigate('/cart')} className="text-ink-600 hover:underline">
-                Back to cart
-              </button>
-              <button type="submit" disabled={loading} className="btn-primary disabled:opacity-50">
-                {loading ? 'Loading...' : `Continue to payment (${totalAmount.toLocaleString()} RWF)`}
-              </button>
-            </div>
-          </form>
-        )}
-
-        {step === 'payment' && clientSecret && (
+      <main className="bg-ink-100 band">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 grid lg:grid-cols-[minmax(0,1fr)_21rem] gap-8 lg:gap-12 items-start">
           <div>
-            <p className="text-ink-600 mb-2">Complete your payment below.</p>
-            <p className="font-medium text-ink-900">Total: {(orderItems.reduce((s, i) => s + i.price * i.quantity, 0)).toLocaleString()} RWF</p>
-            {!stripePromise ? (
-              <div className="mt-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
-                <p className="font-medium">Payment form not configured</p>
-                <p className="mt-1">Set <code className="bg-amber-100 px-1 rounded">VITE_STRIPE_PUBLISHABLE_KEY</code> in your frontend <code className="bg-amber-100 px-1 rounded">.env</code> (use the same value as <code className="bg-amber-100 px-1 rounded">STRIPE_PUBLISHABLE_KEY</code> from the backend) to enable Stripe checkout.</p>
-              </div>
+            {step === 1 ? (
+              <form onSubmit={continueToPayment} noValidate>
+                <Card title="Who's ordering" note="We'll send your receipt here.">
+                  <div className="fld-pair">
+                    <div className="fld">
+                      <label htmlFor="name">Full name <Req /></label>
+                      <input id="name" type="text" required autoComplete="name" placeholder="Jane Uwase"
+                             value={form.customerName} onChange={set('customerName')} />
+                    </div>
+                    <div className="fld">
+                      <label htmlFor="email">Email <Req /></label>
+                      <input id="email" type="email" required autoComplete="email" placeholder="you@example.com"
+                             value={form.customerEmail} onChange={set('customerEmail')} />
+                    </div>
+                  </div>
+                  {/* Phone is not optional in Rwanda: the courier calls before delivering. */}
+                  <div className="fld !mb-0">
+                    <label htmlFor="phone">Phone number <Req /></label>
+                    <input id="phone" type="tel" required autoComplete="tel" placeholder="+250 7•• ••• •••"
+                           value={form.customerPhone} onChange={set('customerPhone')} />
+                    <p className="fld-hint">The courier will call this number before delivering.</p>
+                  </div>
+                </Card>
+
+                {/* Ahead of the address, because choosing collection removes it. */}
+                <Card title="How it gets there">
+                  <div className="grid gap-2.5">
+                    {DELIVERY_OPTIONS.map(([value, label, price, desc]) => (
+                      <label key={value} className={`flex items-start gap-3.5 p-4 border rounded-edge cursor-pointer transition-colors ${
+                        form.deliveryMethod === value
+                          ? 'border-brand-900 bg-brand-600/[.07]'
+                          : 'border-ink-950/[.14] bg-white hover:border-brand-600'
+                      }`}>
+                        <input type="radio" name="ship" value={value}
+                               checked={form.deliveryMethod === value}
+                               onChange={set('deliveryMethod')}
+                               className="mt-1 accent-brand-900 flex-none" />
+                        <span className="flex-1">
+                          <span className="font-semibold text-[.95rem] flex justify-between gap-4">
+                            <span>{label}</span><span>{price}</span>
+                          </span>
+                          <span className="block text-[.86rem] text-ink-600 mt-0.5">{desc}</span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="mt-5 pt-5 border-t border-ink-950/[.14]">
+                    <label className="flex items-start gap-2.5 text-[.92rem] cursor-pointer">
+                      <input type="checkbox" checked={form.signed} onChange={set('signed')}
+                             className="mt-1 accent-brand-900 flex-none" />
+                      <span>Ask Bruno to sign this copy — no extra charge, adds a day or two.</span>
+                    </label>
+                  </div>
+                </Card>
+
+                {!collecting && (
+                  <>
+                    <Card title="Where it's going" note="All fields required — these are physical books.">
+                      <div className="fld-pair">
+                        <div className="fld">
+                          <label htmlFor="province">Province / City <Req /></label>
+                          <select id="province" value={form.province} onChange={set('province')}>
+                            {PROVINCES.map((p) => <option key={p}>{p}</option>)}
+                          </select>
+                        </div>
+                        <div className="fld">
+                          <label htmlFor="district">District <Req /></label>
+                          <select id="district" value={form.district} onChange={set('district')}>
+                            {districtsFor(form.province).map((d) => <option key={d}>{d}</option>)}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div className="fld-pair">
+                        <div className="fld">
+                          <label htmlFor="sector">Sector <Req /></label>
+                          <input id="sector" type="text" required placeholder="Gikondo"
+                                 value={form.sector} onChange={set('sector')} />
+                        </div>
+                        <div className="fld">
+                          <label htmlFor="street">Street or landmark <Req /></label>
+                          <input id="street" type="text" required placeholder="KK 15 Ave, near SP filling station"
+                                 value={form.street} onChange={set('street')} />
+                        </div>
+                      </div>
+
+                      <div className="fld !mb-0">
+                        <label htmlFor="notes">Delivery notes</label>
+                        <textarea id="notes" placeholder="Gate colour, building name, best time to call…"
+                                  value={form.notes} onChange={set('notes')} />
+                        <p className="fld-hint">Optional, but it helps the courier find you first time.</p>
+                      </div>
+                    </Card>
+
+                    {user && (
+                      <label className="flex items-start gap-2.5 text-[.9rem] text-ink-600 -mt-1 mb-6 cursor-pointer">
+                        <input type="checkbox" checked={saveProfile}
+                               onChange={(e) => setSaveProfile(e.target.checked)}
+                               className="mt-0.5 accent-brand-900 flex-none" />
+                        <span>Save these details to my profile for next time.</span>
+                      </label>
+                    )}
+                  </>
+                )}
+
+                <button type="submit" disabled={loading} className="btn-primary w-full disabled:opacity-60">
+                  {loading ? 'Starting checkout…' : <>Continue to payment <span className="arw">→</span></>}
+                </button>
+              </form>
             ) : (
-              <Elements
-                stripe={stripePromise}
-                options={{
-                  clientSecret,
-                  appearance: {
-                    theme: 'stripe',
-                    variables: { colorPrimary: '#2e949c' },
-                  },
-                }}
-              >
-                <CheckoutForm
-                  clientSecret={clientSecret}
-                  paymentIntentId={paymentIntentId}
-                  orderItems={orderItems}
-                  total={orderItems.reduce((s, i) => s + i.price * i.quantity, 0)}
-                  customerName={form.customerName}
-                  customerEmail={form.customerEmail}
-                  shippingAddress={
-                    form.street || form.city || form.country
-                      ? {
-                          street: form.street,
-                          city: form.city,
-                          state: form.state,
-                          country: form.country,
-                          zipCode: form.zipCode,
-                        }
-                      : undefined
-                  }
-                  onSuccess={() => {
-                    clearCart()
-                    navigate('/order-success?payment_intent=' + paymentIntentId)
-                  }}
-                />
-              </Elements>
+              <>
+                <div className="bg-ink-50 border border-ink-950/[.14] rounded-card p-5 md:p-7">
+                  <h2 className="font-serif text-xl text-ink-900 mb-1">How you'd like to pay</h2>
+                  <p className="text-[.88rem] text-ink-600 mb-6">
+                    Your details go straight to the payment provider — they never touch this site.
+                  </p>
+                  <div className="grid sm:grid-cols-2 gap-2.5">
+                    {PAY_TILES.map((t) => (
+                      <button key={t.id} type="button" className="pay-tile"
+                              aria-pressed={method === t.id} onClick={() => setMethod(t.id)}>
+                        <span className="block font-semibold text-[.92rem]">{t.name}</span>
+                        <span className="text-[.78rem] text-ink-500">{t.sub}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {tile.opt === 'mobilemoneyrwanda' && (
+                    <p className="fld-hint mt-5">
+                      You'll get a prompt on your phone to approve the payment.
+                    </p>
+                  )}
+                </div>
+
+                <button type="button" onClick={pay} className="btn-primary w-full mt-5">
+                  Pay {formatRWF(session.amount)}
+                </button>
+                <p className="text-center mt-4">
+                  <button type="button" onClick={() => setStep(1)} className="link-more">
+                    ← Back to delivery details
+                  </button>
+                </p>
+              </>
             )}
           </div>
-        )}
-      </div>
+
+          <aside className="summary-card">
+            <h2 className="font-serif text-xl text-ink-900 mb-4">Your order</h2>
+            {view.lines.map((l) => (
+              <div key={l.key}
+                   className="grid grid-cols-[46px_minmax(0,1fr)_auto] gap-3.5 items-center py-3 border-b border-ink-950/[.14]">
+                <img src={cldResize(l.coverImage, 92)} alt=""
+                     className="aspect-[2/3] w-full object-cover rounded-edge" />
+                <div className="min-w-0">
+                  <div className="font-serif text-[.98rem] text-ink-900 leading-tight">{l.title}</div>
+                  <div className="text-[.8rem] text-ink-500 mt-0.5">Paperback · qty {l.quantity}</div>
+                </div>
+                <div className="text-[.9rem] font-semibold whitespace-nowrap">
+                  {formatRWF(l.price * l.quantity)}
+                </div>
+              </div>
+            ))}
+
+            <div className="pt-3">
+              <div className="flex justify-between py-2 text-[.95rem]">
+                <span>Subtotal</span><span className="font-semibold">{formatRWF(view.subtotal)}</span>
+              </div>
+              <div className="flex justify-between py-2 text-[.95rem]">
+                <span className="text-ink-600">Delivery</span>
+                <span className="text-ink-600 font-medium">
+                  {view.deliveryFee === 0 ? 'Free' : formatRWF(view.deliveryFee)}
+                </span>
+              </div>
+            </div>
+            <div className="flex justify-between items-baseline mt-3 pt-3 border-t border-ink-950/[.14]">
+              <span className="font-semibold text-[.95rem]">Total</span>
+              <span className="font-serif text-2xl">{formatRWF(view.total)}</span>
+            </div>
+
+            {step === 1 && (
+              <Link to="/cart" className="link-more inline-flex mt-5">← Edit cart</Link>
+            )}
+          </aside>
+        </div>
+      </main>
+    </>
+  )
+}
+
+function Card({ title, note, children }) {
+  return (
+    <div className="bg-ink-50 border border-ink-950/[.14] rounded-card p-5 md:p-7 mb-5">
+      <h2 className="font-serif text-xl text-ink-900 mb-1">{title}</h2>
+      {note
+        ? <p className="text-[.88rem] text-ink-600 mb-6">{note}</p>
+        : <div className="mb-5" />}
+      {children}
     </div>
   )
 }
+
+const Req = () => <span className="text-red-700" aria-hidden="true">*</span>

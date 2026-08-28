@@ -8,7 +8,22 @@ const explore = [
   { to: '/my-work', label: 'My Work' },
 ]
 
-export default function Footer() {
+export default function Footer({ variant = 'full' }) {
+  if (variant === 'reduced') {
+    return (
+      <footer className="bg-ink-950 text-ink-100/45 py-10">
+        <div className="w-full px-[var(--gut)] flex flex-wrap gap-4 justify-between text-sm">
+          <span>© {new Date().getFullYear()} Bruno Iradukunda</span>
+          <span>
+            <Link to="/books#ordering" className="text-ink-100/70 hover:text-brand-300">Ordering &amp; delivery</Link>
+            {' · '}
+            <Link to="/contact" className="text-ink-100/70 hover:text-brand-300">Contact</Link>
+          </span>
+        </div>
+      </footer>
+    )
+  }
+
   return (
     <footer className="on-dark bg-ink-950 text-ink-100 border-t border-ink-100/15">
       <div className="max-w-[1240px] mx-auto px-4 sm:px-6 pt-14 md:pt-20 pb-8">

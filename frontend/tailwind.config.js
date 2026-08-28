@@ -40,6 +40,13 @@ export default {
           900: '#1C2220',
           950: '#121615', // ink
         },
+        // The one mockup colour with no existing token: the "on the way" status.
+        // sky-700 is 5.9:1 on ink-50, so it clears AA as pill text.
+        sky: {
+          100: '#DCE8F0',
+          600: '#2F6690',
+          700: '#265A7E',
+        },
       },
       borderRadius: {
         // Editorial radii. Deliberately additive: existing rounded-lg/xl/2xl

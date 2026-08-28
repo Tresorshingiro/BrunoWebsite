@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import { ShoppingBag, User, LogOut, Menu, X, Package } from 'lucide-react'
+import { ShoppingBag, User, LogOut, Menu, X, Package, Lock } from 'lucide-react'
 import { useCart } from '../context/CartContext'
 import { useUser } from '../context/UserContext'
 import { useScrolled } from '../hooks/useMotion'
@@ -26,6 +26,23 @@ export default function Header({ variant = 'solid' }) {
   const { totalItems } = useCart()
   const { user, logout } = useUser()
   const scrolled = useScrolled(40)
+
+  // Checkout only: wordmark and a lock, nothing to click away with.
+  if (variant === 'minimal') {
+    return (
+      <header className="fixed top-0 inset-x-0 z-50 bg-ink-950 border-b border-ink-100/15">
+        <div className="w-full px-[var(--gut)] h-14 md:h-16 flex items-center gap-8">
+          <Link to="/" className="font-serif text-xl md:text-2xl font-semibold text-ink-100 mr-auto">
+            Bruno Iradukunda
+          </Link>
+          <span className="flex items-center gap-2 text-xs text-ink-100/60">
+            <Lock className="w-3.5 h-3.5" strokeWidth={1.8} />
+            Secure checkout
+          </span>
+        </div>
+      </header>
+    )
+  }
 
   const isOverlay = variant === 'overlay'
   // The overlay starts transparent; once scrolled (or on any solid page) it

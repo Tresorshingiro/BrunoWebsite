@@ -1,7 +1,8 @@
 const router = require('express').Router()
 const {
-    createPaymentIntent,
-    confirmOrder,
+    initiate,
+    verify,
+    webhook,
     getOrders,
     getOrder,
     updateOrderStatus,
@@ -11,8 +12,10 @@ const authMiddleware = require('../middleware/authMiddleware')
 const userAuthMiddleware = require('../middleware/userAuthMiddleware')
 
 // User protected routes (require customer login)
-router.post('/create-intent', userAuthMiddleware, createPaymentIntent)
-router.post('/confirm-order', userAuthMiddleware, confirmOrder)
+router.post('/initiate', userAuthMiddleware, initiate)
+router.post('/verify', userAuthMiddleware, verify)
+// No auth middleware: Flutterwave has no user token. Verified by verif-hash.
+router.post('/webhook', webhook)
 
 // Admin protected routes
 router.get('/orders', authMiddleware, getOrders)

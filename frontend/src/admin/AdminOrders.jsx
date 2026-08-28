@@ -4,6 +4,37 @@ import toast from 'react-hot-toast'
 
 const statusOptions = ['pending', 'paid', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded']
 
+// Mirrors the customer-facing vocabulary (spec §3.4) so admin and customer
+// describe an order identically. TODO: replace with the shared status module
+// once Task 9 lands.
+const statusLabels = {
+  pending: 'Awaiting payment',
+  paid: 'Preparing',
+  processing: 'Preparing',
+  shipped: 'On the way',
+  delivered: 'Delivered',
+  cancelled: 'Cancelled',
+  refunded: 'Refunded',
+}
+
+// Colour maps to meaning, not to the raw status name: amber while work is
+// in progress, blue once it's moving, brand moss once it's done, red if it
+// didn't happen.
+const statusColors = {
+  pending: 'bg-ink-100 text-ink-600',
+  paid: 'bg-amber-100 text-amber-800',
+  processing: 'bg-amber-100 text-amber-800',
+  shipped: 'bg-blue-100 text-blue-800',
+  delivered: 'bg-brand-100 text-brand-800',
+  cancelled: 'bg-red-100 text-red-800',
+  refunded: 'bg-red-100 text-red-800',
+}
+
+const formatAddress = (a) => {
+  if (!a) return ''
+  return [a.street, a.sector, a.district, a.province].filter(Boolean).join(', ')
+}
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -63,7 +94,11 @@ export default function AdminOrders() {
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-ink-900 break-words">{order.customerName}</p>
                   <p className="text-sm text-ink-500 break-all">{order.customerEmail}</p>
+                  <p className="text-sm text-ink-600 mt-0.5">{order.customerPhone}</p>
                   <p className="text-xs text-ink-400 mt-1">{formatDate(order.createdAt)}</p>
+                  <span className={`inline-block mt-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[order.status] || 'bg-ink-100 text-ink-600'}`}>
+                    {statusLabels[order.status] || order.status}
+                  </span>
                 </div>
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
                   <span className="font-semibold text-ink-900 text-lg">{(order.totalAmount ?? 0).toLocaleString()} RWF</span>
@@ -74,7 +109,7 @@ export default function AdminOrders() {
                     className="px-3 py-2 sm:py-1.5 rounded-lg border border-ink-200 text-sm w-full sm:w-auto"
                   >
                     {statusOptions.map((s) => (
-                      <option key={s} value={s}>{s}</option>
+                      <option key={s} value={s}>{statusLabels[s] || s}</option>
                     ))}
                   </select>
                   <button
@@ -86,10 +121,17 @@ export default function AdminOrders() {
                   </button>
                 </div>
               </div>
-              {order.shippingAddress && (order.shippingAddress.street || order.shippingAddress.city) && (
-                <p className="text-sm text-ink-600 mb-2 break-words">
-                  Ship to: {[order.shippingAddress.street, order.shippingAddress.city, order.shippingAddress.state, order.shippingAddress.country, order.shippingAddress.zipCode].filter(Boolean).join(', ')}
-                </p>
+              <p className="text-sm text-ink-600 mb-1 break-words">
+                {order.deliveryMethod === 'collect' ? 'Collection' : 'Delivery'}
+                {order.deliveryFee ? ` — fee ${order.deliveryFee.toLocaleString()} RWF` : ''}
+              </p>
+              <p className="text-sm text-ink-600 mb-2 break-words">
+                {order.deliveryMethod === 'collect'
+                  ? 'Collection in person'
+                  : `Ship to: ${formatAddress(order.shippingAddress) || 'No address on file'}`}
+              </p>
+              {order.signed && (
+                <p className="text-sm text-brand-700 mb-2 font-medium">Signed copy requested</p>
               )}
               <ul className="border-t border-ink-100 pt-3 space-y-1">
                 {order.items?.map((item, i) => (

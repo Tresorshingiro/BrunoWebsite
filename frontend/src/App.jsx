@@ -24,6 +24,8 @@ import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import OrderSuccess from './pages/OrderSuccess'
 import Orders from './pages/Orders'
+import OrderDetail from './pages/OrderDetail'
+import Profile from './pages/Profile'
 import Login from './pages/Login'
 import Unsubscribe from './pages/Unsubscribe'
 
@@ -78,6 +80,8 @@ export default function App() {
               <Route path="/checkout" element={<ProtectedRoute><Checkout /></ProtectedRoute>} />
               <Route path="/order-success" element={<ProtectedRoute><OrderSuccess /></ProtectedRoute>} />
               <Route path="/orders" element={<ProtectedRoute><Orders /></ProtectedRoute>} />
+              <Route path="/orders/:id" element={<ProtectedRoute><OrderDetail /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
             </Route>
 
