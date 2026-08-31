@@ -1556,6 +1556,20 @@
 .bk-crumbs a { transition: color .2s var(--ease); }
 .bk-crumbs a:hover { color: #9CD3C4; }
 
+/* Under 640px the global tap-target rule (min-height/min-width: 44px on every
+   anchor) hits "Home" and "Books" but not the "/" separators or the
+   current-page span, which stay 19.7px tall. The links' text then rode ~12px
+   above the rest of the row, and the 44px min-width stranded each separator in
+   an oversized gap.
+
+   Breadcrumbs are inline navigation, which WCAG 2.5.8 exempts from the
+   target-size minimum, so they opt out of that rule entirely and every item in
+   the row is the same box again. */
+.bk-crumbs a {
+  min-height: 0;
+  min-width: 0;
+}
+
 .bk-stock {
   display: inline-flex;
   align-items: center;

@@ -142,7 +142,7 @@ export default function BookDetail() {
           </nav>
 
           <div className="grid lg:grid-cols-[minmax(0,.7fr)_minmax(0,1fr)] gap-10 lg:gap-16 items-start">
-            <div className="max-w-[320px] w-full mx-auto lg:mx-0">
+            <div className="max-w-[320px] w-full">
               <BookCover3D
                 src={book.coverImage}
                 alt={`Cover of ${book.title}`}
